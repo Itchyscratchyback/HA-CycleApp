@@ -1,0 +1,482 @@
+title: Menstrual Tracker v11
+views:
+  - title: Cycle Intelligence
+    path: cycle
+    icon: mdi:calendar-heart
+    cards:
+      - type: custom:button-card
+        entity: sensor.cycle_day
+        show_name: false
+        show_icon: false
+        show_state: false
+        custom_fields:
+          ring: |
+            [[[
+              const day =
+                Number(states['sensor.cycle_day']?.state || 1);
+
+              const length =
+                Number(states['sensor.cycle_length_preferred']?.state || 28);
+
+              const pct =
+                Math.max(0, Math.min(100, (day/length)*100));
+
+              const phase =
+                states['sensor.cycle_phase']?.state || 'Unknown';
+
+              const fertility =
+                states['sensor.fertility_status']?.state || 'Unknown';
+
+              const circumference = 565;
+              const progress = circumference * (pct/100);
+
+              let color = "#ff6fa5";
+
+              switch (phase) {
+
+                case "Period":
+                  color = "#ff6fa5";
+                  break;
+
+                case "Follicular":
+                  color = "#63a4ff";
+                  break;
+
+                case "Fertile":
+                  color = "#ffd54f";
+                  break;
+
+                case "Ovulation":
+                  color = "#ff4444";
+                  break;
+
+                case "Luteal":
+                  color = "#6ecb63";
+                  break;
+              }
+
+              return `
+              <div style="display:flex;justify-content:center;">
+                <svg width="260" height="260" viewBox="0 0 260 260">
+
+                  <circle
+                    cx="130"
+                    cy="130"
+                    r="90"
+                    stroke="#303030"
+                    stroke-width="16"
+                    fill="none"/>
+
+                  <circle
+                    cx="130"
+                    cy="130"
+                    r="90"
+                    stroke="${color}"
+                    stroke-width="16"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-dasharray="${progress} ${circumference}"
+                    transform="rotate(-90 130 130)"
+                    style="transition: all 1s ease;"
+                  />
+
+                  <text
+                    x="130"
+                    y="105"
+                    text-anchor="middle"
+                    font-size="48"
+                    fill="white">
+
+                    ${day}
+                  </text>
+
+                  <text
+                    x="130"
+                    y="132"
+                    text-anchor="middle"
+                    font-size="18"
+                    fill="#cccccc">
+
+                    of ${length}
+                  </text>
+
+                  <text
+                    x="130"
+                    y="162"
+                    text-anchor="middle"
+                    font-size="18"
+                    fill="${color}">
+
+                    ${phase}
+                  </text>
+
+                  <text
+                    x="130"
+                    y="186"
+                    text-anchor="middle"
+                    font-size="14"
+                    fill="#aaaaaa">
+
+                    ${fertility} Fertility
+                  </text>
+
+                </svg>
+              </div>
+              `;
+            ]]]
+        styles:
+          card:
+            - height: 360px
+            - border-radius: 30px
+            - padding: 12px
+      - type: entities
+        title: Current Status
+        entities:
+          - entity: sensor.cycle_phase
+            name: Current Phase
+          - entity: sensor.cycle_day
+            name: Current Cycle Day
+          - entity: sensor.fertility_status
+            name: Fertility Status
+          - entity: sensor.fertility_score
+            name: Fertility Score
+          - entity: sensor.days_to_ovulation
+            name: Days To Ovulation
+          - entity: sensor.days_to_next_period
+            name: Days To Period
+          - entity: sensor.cycle_prediction_confidence
+            name: Prediction Confidence
+          - entity: sensor.cycle_data_quality
+            name: Data Quality
+      - type: entities
+        title: Upcoming Events
+        entities:
+          - entity: sensor.predicted_ovulation_date
+            name: Upcoming Ovulation
+          - entity: sensor.predicted_next_period_date
+            name: Upcoming Period
+          - entity: sensor.predicted_next_ovulation_date
+            name: Following Ovulation
+          - entity: sensor.predicted_following_period_date
+            name: Following Period
+          - entity: sensor.pre_period_date
+            name: Pre-Period Date
+          - entity: sensor.days_to_next_ovulation_date
+            name: Days To Following Ovulation
+          - entity: sensor.days_to_pre_period
+            name: Days To Pre-Period
+      - type: markdown
+        content: |
+
+          ## Cycle Phase Legend
+
+          🩷 **Period**
+
+          🟦 **Follicular**
+
+          🟨 **Fertile Window**
+
+          🟥 **Ovulation**
+
+          🟩 **Luteal**
+      - type: entities
+        title: Prediction Window
+        entities:
+          - entity: sensor.earliest_expected_period
+            name: Earliest Expected Period
+          - entity: sensor.predicted_next_period_date
+            name: Predicted Period
+          - entity: sensor.latest_expected_period
+            name: Latest Expected Period
+      - type: entities
+        title: Statistics
+        entities:
+          - entity: sensor.cycle_count
+            name: Recorded Cycles
+          - entity: sensor.period_dates_count
+            name: Total Period Dates
+          - entity: sensor.last_cycle_length_robust
+            name: Last Cycle
+          - entity: sensor.cycle_length_mean_robust
+            name: Robust Mean
+          - entity: sensor.cycle_length_median
+            name: Median
+          - entity: sensor.cycle_length_stddev_robust
+            name: StdDev
+          - entity: sensor.shortest_cycle_length
+            name: Shortest Cycle
+          - entity: sensor.longest_cycle_length
+            name: Longest Cycle
+          - entity: sensor.cycle_sample_size
+            name: Sample Size
+          - entity: sensor.cycle_outlier_count
+            name: Outliers
+      - type: gauge
+        entity: sensor.cycle_length_stddev_robust
+        name: Cycle Stability
+        min: 0
+        max: 10
+        severity:
+          green: 0
+          yellow: 2
+          red: 4
+      - type: entities
+        title: Intercourse Analytics
+        entities:
+          - entity: sensor.last_intercourse_date
+            name: Last Activity
+          - entity: sensor.days_since_intercourse
+            name: Days Since Activity
+          - entity: sensor.intercourse_count_current_cycle
+            name: Current Cycle Activity
+          - entity: sensor.intercourse_count_fertile_window
+            name: Fertile Window Activity
+      - type: custom:apexcharts-card
+        graph_span: 10d
+        header:
+          show: true
+          title: Activity Timeline
+        apex_config:
+          chart:
+            height: 350
+            width: 500
+          annotations:
+            xaxis:
+              - x: 1
+                x2: 5
+                fillColor: '#ff6fa5'
+                opacity: 0.1
+              - x: 6
+                x2: 10
+                fillColor: '#63a4ff'
+                opacity: 0.1
+              - x: 11
+                x2: 14
+                fillColor: '#ffd54f'
+                opacity: 0.12
+              - x: 15
+                x2: 15
+                fillColor: '#ff4444'
+                opacity: 0.18
+              - x: 16
+                x2: 28
+                fillColor: '#6ecb63'
+                opacity: 0.1
+        series:
+          - entity: sensor.intercourse_count_current_cycle
+            name: Activity Count
+            color: '#ff6fa5'
+            stroke_width: 3
+      - type: markdown
+        content: >
+
+          ## History Summary
+
+
+          **Current Phase:** {{ states('sensor.cycle_phase') }}
+
+
+          **Cycle Day:** {{ states('sensor.cycle_day') }}
+
+
+          **Preferred Cycle Length:** {{ states('sensor.cycle_length_preferred')
+          }} days
+
+
+          **Confidence:** {{ states('sensor.cycle_prediction_confidence') }}
+
+
+          **Data Quality:** {{ states('sensor.cycle_data_quality') }}
+
+
+          **Median Length:** {{ states('sensor.cycle_length_median') }} days
+
+
+          **Mean Length:** {{ states('sensor.cycle_length_mean_robust') }} days
+      - type: horizontal-stack
+        cards:
+          - type: button
+            entity: input_button.period_started
+            name: Period Started
+            icon: mdi:calendar-plus
+          - type: button
+            entity: input_button.log_intercourse
+            name: Log Activity
+            icon: mdi:heart
+          - type: button
+            entity: input_button.clear_intercourse_history
+            name: Clear Activity
+            icon: mdi:delete
+      - type: entities
+        title: Raw Data
+        show_header_toggle: false
+        entities:
+          - entity: input_text.period_start_history
+          - entity: input_text.intercourse_history
+          - entity: sensor.cycle_lengths_calculated
+      - type: entities
+        title: Diagnostics
+        show_header_toggle: false
+        entities:
+          - sensor.cycle_phase
+          - sensor.fertility_status
+          - sensor.predicted_ovulation_date
+          - sensor.predicted_next_period_date
+          - sensor.days_to_ovulation
+          - sensor.days_to_next_period
+          - sensor.cycle_prediction_confidence
+      - type: entities
+        title: Pregnancy Chance Prediction
+        show_header_toggle: false
+        entities:
+          - entity: sensor.fertility_window_status
+            name: Current Status
+          - type: section
+            label: Fertility Window
+          - entity: sensor.fertility_window_start
+            name: Fertility Window Start
+          - entity: sensor.fertility_window_end
+            name: Fertility Window End
+          - type: section
+            label: Peak Fertility
+          - entity: sensor.peak_fertility_start
+            name: Peak Fertility Start
+          - entity: sensor.peak_fertility_end
+            name: Peak Fertility End
+          - entity: sensor.predicted_ovulation_date
+            name: Most Likely Ovulation
+          - entity: sensor.earliest_ovulation_date
+            name: Earliest Ovulation
+          - entity: sensor.latest_ovulation_date
+            name: Latest Ovulation
+          - type: section
+            label: Fertility Metrics
+          - entity: sensor.fertility_score
+            name: Fertility Score
+          - entity: sensor.fertility_status
+            name: Fertility Status
+          - entity: sensor.days_to_ovulation
+            name: Days To Ovulation
+          - entity: sensor.cycle_prediction_confidence
+            name: Prediction Confidence
+          - entity: sensor.cycle_length_stddev_robust
+            name: Cycle Variation
+          - entity: sensor.cycle_data_quality
+            name: Data Quality
+      - type: entities
+        title: Raw Data
+        show_header_toggle: false
+        entities:
+          - entity: input_text.period_start_history
+          - entity: input_text.intercourse_history
+          - entity: sensor.cycle_lengths_calculated
+      - type: markdown
+        title: Future Cycle Forecast
+        content: |
+
+          ## Future Ovulation Dates
+
+          {% set start = states('sensor.predicted_ovulation_date') %}
+          {% set cycle = states('sensor.cycle_length_mean_robust')|float(28) %}
+
+          {% if start not in ['unknown','unavailable'] %}
+          {% set anchor = as_datetime(start) %}
+
+          • {{ anchor.date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*1))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*2))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*3))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*5))).date() }}
+
+          {% endif %}
+
+          ## Future Period Dates
+
+          {% set start = states('sensor.predicted_next_period_date') %}
+
+          {% if start not in ['unknown','unavailable'] %}
+          {% set anchor = as_datetime(start) %}
+
+          • {{ anchor.date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*1))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*2))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*3))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+
+          • {{ (anchor + timedelta(days=(cycle*5))).date() }}
+
+          {% endif %}
+      - type: custom:bubble-card
+        card_type: button
+        button_type: name
+        name: Future Predictions
+        icon: mdi:calendar-heart
+        show_state: false
+        tap_action:
+          action: navigate
+          navigation_path: '#future_predictions'
+      - type: custom:bubble-card
+        card_type: pop-up
+        hash: '#future_predictions'
+        name: Future Predictions
+        icon: mdi:calendar-heart
+        cards:
+          - type: markdown
+            content: >
+
+              ## Future Ovulation Dates
+
+              {% set start = states('sensor.predicted_ovulation_date') %} {% set
+              cycle = states('sensor.cycle_length_mean_robust')|float(28) %}
+
+              {% if start not in ['unknown','unavailable'] %} {% set anchor =
+              as_datetime(start) %}
+
+              • {{ anchor.date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*1))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*2))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*3))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+
+              {% endif %}
+
+              ---
+
+              ## Future Period Dates
+
+              {% set start = states('sensor.predicted_next_period_date') %}
+
+              {% if start not in ['unknown','unavailable'] %} {% set anchor =
+              as_datetime(start) %}
+
+              • {{ anchor.date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*1))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*2))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*3))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+
+              {% endif %}
+        button_type: name
+        card_layout: large-2-rows

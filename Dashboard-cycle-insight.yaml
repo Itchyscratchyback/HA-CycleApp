@@ -1,0 +1,385 @@
+title: Cycle Animated Dashboard
+views:
+  - title: Cycle Overview
+    path: cycle_overview
+    cards:
+      - type: vertical-stack
+        cards:
+          - square: false
+            type: grid
+            cards:
+              - type: custom:button-card
+                entity: sensor.cycle_day
+                show_icon: false
+                show_state: false
+                show_name: false
+                styles:
+                  card:
+                    - background-color: '#db7093'
+                    - background-image: >-
+                        url("https://img.magnific.com/free-vector/transparent-pink-heart-shapes-border-frame_107791-33387.jpg?t=st=1784614057~exp=1784617657~hmac=dff3b03af0d471846b3858b22c568839c24b56f91b89a19072bf0a953091a483&w=1480")
+                    - background-size: 150%
+                    - background-position: center
+                    - background-repeat: no-repeat
+                    - border-radius: 15px
+                    - padding: 8px 0 0 0
+                    - box-shadow: none
+                    - min-height: 30px
+                  custom_fields:
+                    ring:
+                      - width: 260px
+                      - height: 260px
+                      - display: block
+                      - margin: 0 auto
+                      - position: relative
+                      - justify-self: center
+                      - align-self: center
+                custom_fields:
+                  ring: |
+                    [[[ return (function () {
+                      const get   = (e) => (states[e]?.state ?? 'unknown');
+                      const toInt = (v,d=0) => { const n = parseInt(v);  return isNaN(n) ? d : n; };
+                      const toF   = (v,d=0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+
+                      const total  = Math.max(15, Math.min(60, Math.round(toF(get('sensor.cycle_length_preferred'), 28))));
+                      const luteal = Math.max(10, Math.min(17, Math.round(toF(get('input_number.luteal_length'), 14))));
+                      const day    = Math.max(1, Math.min(total, toInt(get('sensor.cycle_day'), 1)));
+
+                      const ovuD      = Math.max(1, Math.min(total, Math.round(total - luteal)));
+                      const fertStart = Math.max(1, ovuD - 5);
+                      const fertEnd   = Math.min(total, ovuD + 2);
+
+                      // Pre-period last 5 days in cycle
+                      const preStart  = Math.max(1, total - 5 + 1);
+                      const preEnd    = total;
+
+                      const preActive = (get('binary_sensor.pre_period_window_active') === 'on');
+
+                      // Use the RESOLVED T-5 sensor for shimmer pacing
+                      const toIntSafe = (s, d=5) => { const v = states[s]?.state; const n = parseInt(v); return isNaN(n) ? d : n; };
+                      const preRem    = Math.max(0, Math.min(5, toIntSafe('sensor.days_to_t_minus_5_resolved', 5)));
+
+                      const size=260, cx=size/2, cy=size/2, r=90, stroke=18;
+                      const ang=(d)=> ((d-1)/total)*360;
+                      const rad=(deg)=> (deg-90) * Math.PI/180;
+                      const polar =(a)=> [ cx + r * Math.cos(rad(a)),  cy + r * Math.sin(rad(a)) ];
+                      const polarR=(a,rr)=> [ cx + rr* Math.cos(rad(a)), cy + rr* Math.sin(rad(a)) ];
+                      const arcPath=(s,e)=>{
+                        let a1=s%360, a2=e%360; if (a2<=a1) a2+=360;
+                        const large=((a2-a1)>180)?1:0;
+                        const [x1,y1]=polar(a1), [x2,y2]=polar(a2);
+                        return `M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+                      };
+
+                      const mensesPath    = arcPath(ang(1),         ang(Math.min(5,total)+1));
+                      const fertilePath   = arcPath(ang(fertStart), ang(fertEnd+1));
+                      const prePeriodPath = arcPath(ang(preStart),  ang(preEnd+1));
+
+                      // Current day dot (ONLY dot)
+                      const [mx,my] = polar(ang(day));
+
+                      // ========= OVULATION MARKER (NOT A DOT) =========
+                      const ovuA   = ang(ovuD);
+                      const innerR = r - (stroke/2) - 10;
+                      const outerR = r + (stroke/2) + 10;
+                      const [olx,oly] = polarR(ovuA, innerR);
+                      const [orx,ory] = polarR(ovuA, outerR);
+
+                      const dur = preActive
+                        ? (preRem <= 1 ? '1.2s' : (preRem <= 3 ? '1.8s' : '2.4s'))
+                        : '3.2s';
+
+                      return `
+                      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+                        <defs>
+                          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+                          </filter>
+                          <linearGradient id="goldShimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#ffcc33" stop-opacity="0.85">
+                              <animate attributeName="offset" values="0;1" dur="${dur}" repeatCount="indefinite" />
+                            </stop>
+                            <stop offset="50%" stop-color="#fff6a2" stop-opacity="1" />
+                            <stop offset="100%" stop-color="#ffcc33" stop-opacity="0.35" />
+                          </linearGradient>
+                        </defs>
+
+                        <g filter="url(#shadow)">
+                          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#E5E7EB" stroke-width="${stroke}" />
+                          <path d="${mensesPath}"    fill="none" stroke="#ef4444"  stroke-width="${stroke}" stroke-linecap="round" />
+                          <path d="${fertilePath}"   fill="none" stroke="#AE37A8"  stroke-width="${stroke}" stroke-linecap="round" />
+                          <path d="${prePeriodPath}"   fill="none" stroke="#daa520"  stroke-width="${stroke}" stroke-linecap="round" />
+
+
+                        
+                          <!-- OUTER OUTLINE (2px) -->
+                          <circle
+                            cx="${cx}" cy="${cy}"
+                            r="${r + (stroke/2)}"
+                            fill="none"
+                            stroke="#000"
+                            stroke-width="1.5"
+                            vector-effect="non-scaling-stroke"
+                          />
+                          
+                          <!-- INNER OUTLINE (2px) -->
+                          <circle
+                            cx="${cx}" cy="${cy}"
+                            r="${r - (stroke/2)}"
+                            fill="none"
+                            stroke="#000"
+                            stroke-width="1.5"
+                            vector-effect="non-scaling-stroke"
+                          />
+
+
+
+                          <!-- OVULATION MARKER LINE (distinct from dot) -->
+                          <line x1="${olx.toFixed(1)}" y1="${oly.toFixed(1)}"
+                                x2="${orx.toFixed(1)}" y2="${ory.toFixed(1)}"
+                                stroke="#AE37A8" stroke-width="3" stroke-linecap="round" opacity="0.8">
+                            <animate attributeName="opacity" values="0.45;0.8;0.45" dur="2.6s" repeatCount="indefinite" />
+                          </line>
+
+                          <!-- CURRENT DAY DOT (only dot) -->
+                          <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="6" fill="#3b82f6" stroke="white" stroke-width="3.5">
+                            <animate attributeName="r" values="6;7.5;6" dur="2.2s" repeatCount="indefinite" />
+                          </circle>
+                        </g>
+
+                        <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="20" font-weight="600" fill="#111827">Day ${day}</text>
+
+                      </svg>`;
+                    })(); ]]]
+              - square: false
+                type: grid
+                cards:
+                  - type: custom:mushroom-template-card
+                    primary: Fertility Score
+                    secondary: '{{ states(''sensor.fertility_score'') }}/10'
+                    icon: mdi:flower
+                    features_position: bottom
+                    vertical: true
+                  - type: shortcut
+                    tap_action:
+                      action: navigate
+                      navigation_path: /pudding-rad
+                    vertical: true
+                    icon: mdi:ferris-wheel
+                columns: 2
+            columns: 1
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-template-card
+                primary: Days To Ovulation
+                icon: mdi:fruit-watermelon
+                features_position: bottom
+                vertical: true
+                color: '#ff4966'
+                tap_action:
+                  action: more-info
+                entity: sensor.predicted_ovulation_date
+                secondary: |2-
+                    {% set v = states('sensor.days_to_ovulation') | float %}
+                    {% if v > -5 %}
+                      {{ v }} Day
+                    {% else %}
+                      {{ states('sensor.days_to_next_ovulation_date') }}
+                    {% endif %}
+              - type: custom:mushroom-template-card
+                primary: Days to Creampie
+                secondary: >
+                  {% set v = states('sensor.days_to_pre_period') %} {% if v in
+                  ['unknown','unavailable','', None] %}
+                    —
+                  {% else %}
+                    {% set n = v | int(999) %}
+                    {% if n <= 0 %} Now {% else %} {{ n }} {% endif %}
+                  {% endif %}
+                icon: mdi:liquid-spot
+                features_position: bottom
+                vertical: true
+                color: '#FFFFFF'
+                tap_action:
+                  action: more-info
+                entity: sensor.pre_period_date
+              - type: custom:mushroom-template-card
+                primary: Days To Period
+                icon: mdi:calendar
+                features_position: bottom
+                color: '#ff4966'
+                tap_action:
+                  action: more-info
+                vertical: true
+                multiline_secondary: false
+                hold_action:
+                  action: none
+                entity: sensor.predicted_next_period_date
+                secondary: |
+                  {{ states('sensor.days_to_next_period') if
+                     states('sensor.days_to_next_period') not in
+                     ['unknown','unavailable',''] else '—' }}
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                name: Cycle Mean
+                entity: sensor.cycle_length_mean_robust
+                icon: mdi:sync
+              - type: custom:mushroom-entity-card
+                name: Cycle Dev.
+                entity: sensor.cycle_length_stddev_robust
+                icon: mdi:sine-wave
+          - square: false
+            type: grid
+            cards:
+              - show_name: true
+                show_icon: true
+                type: button
+                icon: mdi:calendar-start
+                tap_action:
+                  action: more-info
+                hold_action:
+                  action: perform-action
+                  perform_action: input_button.press
+                  confirmation:
+                    text: Weet je het zeker?
+                  target:
+                    entity_id: input_button.period_started
+                  data: {}
+                name: Period Started
+                entity: input_button.period_started
+              - show_name: true
+                show_icon: true
+                type: button
+                icon: mdi:candle
+                tap_action:
+                  action: perform-action
+                  perform_action: automation.trigger
+                  target:
+                    entity_id: automation.special_0069
+                  data:
+                    skip_condition: true
+                name: Set Mood
+                color: pink
+              - show_name: true
+                show_icon: true
+                type: button
+                icon: mdi:dna
+                hold_action:
+                  action: perform-action
+                  perform_action: script.log_button_press
+                  target: {}
+                tap_action:
+                  action: more-info
+                name: ' '
+                entity: input_button.log_intercourse
+            columns: 3
+          - type: custom:bubble-card
+            card_type: button
+            button_type: name
+            name: Future Predictions
+            icon: mdi:calendar-heart
+            show_state: false
+            tap_action:
+              action: navigate
+              navigation_path: '#future_predictions'
+          - type: custom:bubble-card
+            card_type: pop-up
+            hash: '#future_predictions'
+            name: Future Predictions
+            icon: mdi:calendar-heart
+            cards:
+              - type: markdown
+                content: >-
+                  ## Future Ovulation Dates
+
+                  {% set start = states('sensor.predicted_ovulation_date') %}
+
+                  {% set cycle =
+                  states('sensor.cycle_length_mean_robust')|float(28) %}
+
+                  {% set fmt = '%d-%m-%Y' %}
+
+
+                  {% if start not in ['unknown','unavailable'] %}
+
+                  {% set anchor = as_datetime(start) %}
+
+                  • {{ anchor.strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*1))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*2))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*3))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*4))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*5))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*6))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*7))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*8))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*9))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*10))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*11))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*12))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*13))).strftime(fmt) }}
+
+                  {% endif %}
+
+
+                  ---
+
+
+                  ## Future Period Dates
+
+                  {% set start = states('sensor.predicted_next_period_date') %}
+
+
+                  {% if start not in ['unknown','unavailable'] %}
+
+                  {% set anchor = as_datetime(start) %}
+
+                  • {{ anchor.strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*1))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*2))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*3))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*4))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*5))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*6))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*7))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*8))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*9))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*10))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*11))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*12))).strftime(fmt) }}
+
+                  • {{ (anchor + timedelta(days=(cycle*13))).strftime(fmt) }}
+
+                  {% endif %}
+            button_type: name
+            card_layout: large
