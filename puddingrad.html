@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Pudding Rad</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: radial-gradient(circle, #222, #000);
+            color: #fff;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            cursor: pointer;
+        }
+
+        .arrow {
+            font-size: 54px;
+            color: gold;
+            display: inline-block;
+            will-change: transform, left, top;
+            transform-origin: center bottom;
+            position: absolute;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        canvas {
+            background: #fff;
+            border: 8px solid gold;
+            border-radius: 50%;
+            width: min(90vw, 700px);
+            height: min(90vw, 700px);
+        }
+
+        button {
+            padding: 16px 28px;
+            font-size: 20px;
+            border: none;
+            border-radius: 12px;
+            background: #ff2ea6;
+            color: #fff;
+            box-shadow: 0 0 20px #ff2ea6;
+            cursor: pointer;
+        }
+
+        .bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #222;
+            padding: 6px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .lock {
+            opacity: 0.3;
+            filter: grayscale(1);
+        }
+
+        #legend,
+        #popup {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 90%;
+        }
+
+        .box {
+            background: #fff;
+            color: #000;
+            max-width: 700px;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        /* Tool button and menu */
+        .tool {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 28px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tool-menu {
+            position: absolute;
+            right: 10px;
+            top: 110px;
+            background: #fff;
+            color: #000;
+            padding: 8px;
+            border-radius: 8px;
+            display: none;
+            min-width: 200px;
+            z-index: 1000;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+        }
+
+            .tool-menu button {
+                display: block;
+                width: 100%;
+                text-align: left;
+                margin: 4px 0;
+            }
+        /* Lucky Day overlay */
+        .lucky-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1000ms ease;
+            z-index: 2000;
+        }
+
+        .tool-legend {
+            position: absolute;
+            right: 10px;
+            top: 54px;
+            font-size: 20px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 6px 8px;
+        }
+
+        .lucky-overlay.show {
+            opacity: 1;
+        }
+
+        .lucky-content {
+            padding: 20px 28px;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 800;
+            font-size: 20px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(270deg,#ff0080,#ffdd00,#00d4ff,#8b00ff);
+            background-size: 400% 400%;
+            animation: rainbow 2.5s linear infinite;
+        }
+
+            .lucky-content.stop {
+                filter: grayscale(20%) brightness(80%);
+            }
+        /* Replace global page gray-out with button-only disabled style */
+        body.spinning {
+        }
+
+        button.spinning {
+            background: #888 !important;
+            box-shadow: none !important;
+            cursor: default !important;
+            color: #fff !important;
+        }
+
+        /* Jackpot streak boxes */
+        .streak-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 8px 0 12px 0;
+        }
+
+        .streak-box {
+            width: 33px; /* short side horizontal */
+            height: 61px; /* long side vertical */
+            background: rgba(255,255,255,0.06);
+            border: 2px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: rgba(255,255,255,0.15);
+        }
+
+            .streak-box.active {
+                background: linear-gradient(180deg,#ffd54d,#ff8a65);
+                color: #000;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+            }
+
+        .extra-label {
+            text-align: center;
+            color: #fff;
+            margin-top: 6px;
+            font-size: 13px
+        }
+
+        @keyframes rainbow {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        #luckyOverlayText {
+            white-space: pre-wrap;
+            text-align: center;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .stat-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+            .stat-block h3 {
+                margin: 0;
+                font-size: 16px;
+            }
+
+        @media (max-width:600px) {
+            .stats-row {
+                gap: 12px;
+            }
+
+            .stat-block h3 {
+                font-size: 14px;
+            }
+        }
+        /* Responsive layout improvements */
+        .title-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+
+            .title-row h3 {
+                margin: 0;
+                font-size: 16px;
+            }
+
+        @media (max-width: 600px) {
+            canvas {
+                width: min(96vw, 420px);
+                height: min(96vw, 420px);
+            }
+
+            .arrow {
+                font-size: 48px;
+                top: 4px;
+            }
+
+            button {
+                padding: 12px 18px;
+                font-size: 18px;
+            }
+
+            .streak-box {
+                width: 36px;
+                height: 72px;
+                font-size: 22px;
+            }
+
+            .bar {
+                gap: 6px;
+                padding: 4px;
+            }
+
+            .tool-menu {
+                right: 6px;
+                top: 90px;
+                min-width: 160px;
+            }
+
+            .title-row h3 {
+                font-size: 14px;
+            }
+
+            .lucky-content {
+                font-size: 18px;
+                padding: 12px 16px;
+            }
+        }
+        /* Splash / Splat effect styles */
+        .splat {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 56px;
+            height: 56px;
+            pointer-events: none;
+            z-index: 9999;
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.35));
+        }
+
+            .splat .core {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: 100%;
+                height: 100%;
+                background: #fff;
+                border-radius: 50% 50% 48% 52% / 52% 50% 50% 48%;
+                animation: splatCore 700ms cubic-bezier(.2,.7,.2,1) forwards;
+            }
+
+            .splat .droplet {
+                position: absolute;
+                width: 18px;
+                height: 18px;
+                background: #fff;
+                border-radius: 50% 50% 40% 60% / 60% 50% 50% 40%;
+                transform-origin: center;
+                opacity: 1;
+            }
+
+        @keyframes splatCore {
+            0% {
+                transform: translate(-50%, -50%) scale(0.2) rotate(0deg);
+            }
+
+            60% {
+                transform: translate(-50%, -50%) scale(1.15) rotate(-6deg);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            }
+        }
+
+        @keyframes dropletFly {
+            0% {
+                transform: translate(0,0) scale(1) rotate(0deg);
+                opacity: 1
+            }
+
+            70% {
+                opacity: 1
+            }
+
+            100% {
+                transform: translate(var(--dx), var(--dy)) scale(0.9) rotate(var(--rot));
+                opacity: 1
+            }
+        }
+
+        #legend, #popup {
+            z-index: 20000;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 id="t">Pudding Rad</h1>
+
+    <div id="creditBox" style="position:fixed;left:10px;top:10px;background:rgba(0,0,0,0.4);padding:8px 10px;border-radius:8px;font-size:14px;z-index:15000;text-align:left;">
+        <div style="font-weight:700;margin-bottom:4px">Spins available:</div>
+        <div id="creditsText">...</div>
+    </div>
+
+    <!-- Stats row: Jackpot and Rooster blocks side-by-side, each with title above boxes -->
+    <div class="stats-row">
+        <div class="stat-block" id="jackpotBlock">
+            <h3 id="jackpotTitle">Jackpot Teller</h3>
+            <div id="streakContainer" class="streak-container" aria-hidden="false">
+                <div class="streak-box" id="streak1"></div>
+                <div class="streak-box" id="streak2"></div>
+                <div class="streak-box" id="streak3"></div>
+            </div>
+        </div>
+
+        <div class="stat-block" id="roosterBlock">
+            <h3 id="roosterTitle">Rooster Game</h3>
+            <div id="extraStreakContainer" class="streak-container" aria-hidden="false">
+                <div class="streak-box" id="extra1"></div>
+                <div class="streak-box" id="extra2"></div>
+                <div class="streak-box" id="extra3"></div>
+                <div class="streak-box" id="extra4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tool button (top-right) -->
+    <div id="tool" class="tool" title="Tools">🔧</div>
+    <div id="toolMenu" class="tool-menu" aria-hidden="true">
+        <div style="font-weight:700;margin-bottom:6px">Tools</div>
+        <div style="font-size:13px;margin-bottom:6px">Kies resultaat voor de eerstvolgende spin:</div>
+        <button onclick="setForcedMode('normal')">Normaal (random)</button>
+        <button onclick="setForcedMode('🍆')">🍆 Creampie</button>
+        <button onclick="setForcedMode('🔄')">🔄 Auto Spin</button>
+        <button onclick="setForcedMode('🌈')">🌈 Lucky Day (force)</button>
+        <button onclick="setForcedMode('🪄')">🪄 Mystery</button>
+        <button onclick="setForcedMode('❌')">❌ Lose</button>
+        <hr>
+        <div style="font-size:13px;margin:6px 0">Of kies een specifieke tegel:</div>
+        <select id="specificSelect" style="width:100%;padding:6px;margin-bottom:6px"></select>
+        <button onclick="setForcedSpecific()">Gebruik specifieke tegel</button>
+        <hr>
+        <div style="margin-top:6px;font-size:13px">Maintenance</div>
+        <label style="display:block;margin-top:6px"><input type="checkbox" id="freePlayChk"> FREE PLAY (no credits)</label>
+        <button style="margin-top:6px" onclick="addDailyCredit()">Add 1 Credit</button>
+        <div style="margin-top:8px;font-size:13px">Huidige selectie: <span id="forcedIndicator">Geen</span></div>
+    </div>
+
+    <!-- Legend button (book) placed under maintenance tool -->
+    <div id="legendBtn" class="tool-legend" title="Legend" onclick="legend.style.display='block'">📖</div>
+
+    <div><span id="st" style="display:none"></span></div>
+    <div style="position:relative;display:inline-block" id="canvasWrap">
+        <div class="arrow" id="arrow">⬇</div>
+        <canvas id="w" width="700" height="700"></canvas>
+    </div>
+
+    <br>
+    <br>
+
+    <button id="spin">SPIN THE WHEEL</button>
+
+    <div id="r"></div>
+
+    <div>
+        Spins <span id="s">0</span> | Wins <span id="wi">0</span> | Jackpots <span id="j">0</span>
+    </div>
+    <div>Mystery <span id="m">0</span> | LuckyDay <span id="lk">0</span></div>
+
+    <div id="legend">
+        <div class="box">
+            <h2>Pay Table</h2>
+            <p>
+                🍆 Win • Geeft recht op een creampie ! <br /> Draai nogmaals en maak kans op de JACKPOT !
+                <br />
+                <br />🌈 Lucky Day • Veranderd alle win/lose uitkomsten naar het tegenovergestelde voor de eerstvolgende spin
+                <br />
+                <br />❌ Lose • Geeft geen winst
+                <br />
+                <br />🔄 Auto Spin • Geeft een extra spin en (1/10 kans) op 🌈 Lucky Day
+                <br />
+                <br />
+                <br />
+                <br /><h2>EXTRA Kans</h2>🪄 Mystery • Geeft een willekeurige uitkomst: 🍆, 🔄, 🌈, 🎰 of ❌
+                <br />
+                <br /><h2>🎰 Jackpot (3x WIN)</h2> Geeft 7 dagen all-you-can-ride
+                <br />
+                <br /><h2>🐓 Rooster game</h2> Verzamel 4 🐓 binnen 7 dagen - Geeft recht op 4 spins achter elkaar bij 4X 🐓
+                <br /><h4>Verzamel maximaal 1 🐓 per dag</h4>
+                <br />
+                <br /> <h4>! ⚠️ 💦 Ieder verlies kan kostenloos worden ingeleverd voor een blowjob met een max van 10x per week 💦 ⚠️ !</h4>
+            </p>
+            <button onclick="legend.style.display='none'">Sluiten</button>
+        </div>
+    </div>
+
+    <div id="popup">
+        <div class="box">
+            <h2 id="pt"></h2>
+            <p id="pm"></p>
+            <button onclick="popup.style.display='none'">OK</button>
+        </div>
+    </div>
+
+    <div id="luckyOverlay" class="lucky-overlay" aria-hidden="true">
+        <div id="luckyContent" class="lucky-content">
+            <div id="luckyOverlayText">🌈 Lucky Day</div>
+        </div>
+    </div>
+
+    <!-- Mystery carousel overlay -->
+    <div id="mysteryOverlay" class="lucky-overlay" aria-hidden="true" style="z-index:20010;">
+        <div id="mysteryContent" class="lucky-content" style="background:transparent;box-shadow:none;">
+            <div id="mysteryTrackContainer" style="position:relative;width:100%;height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden;perspective:800px;">
+                <div id="mysteryTrack" style="display:flex;align-items:center;gap:18px;will-change:transform;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bar">
+        <span id="a1" class="lock">🥄</span>
+        <span id="a2" class="lock">🍆10</span>
+        <span id="a3" class="lock">🔥5</span>
+        <span id="a4" class="lock">🎰</span>
+        <span id="a5" class="lock">🌈</span>
+    </div>
+
+    <script>// Labels and geometry
+        const labels = [
+            '🍆', '❌', '❌', '❌', '❌', '🍆', '❌', '❌', '🔄', '❌',
+            '🍆', '❌', '🪄', '❌', '❌', '🍆', '❌', '❌', '🔄', '❌',
+            '🍆', '❌', '❌', '❌', '❌'
+        ];
+
+        const n = 25;
+        const arc = Math.PI * 2 / n;
+        let rot = 0;
+
+        // Credits and daily spin logic
+        function getTodayKey() {
+            const d = new Date();
+            return `pr_credits_${d.getFullYear()}_${d.getMonth()+1}_${d.getDate()}`;
+        }
+
+        function loadDailyCredit() {
+            try {
+                const key = getTodayKey();
+                const v = localStorage.getItem(key);
+                return parseInt(v || '0', 10) || 0;
+            } catch (e) { return 0; }
+        }
+
+        function saveDailyCredit(n) {
+            try { localStorage.setItem(getTodayKey(), String(n)); } catch (e) {}
+        }
+
+        function getPersistentCredits() {
+            try { return parseInt(localStorage.getItem('pr_extra_credits')||'0',10)||0; } catch(e){return 0}
+        }
+
+        function setPersistentCredits(v) {
+            try { localStorage.setItem('pr_extra_credits', String(v)); } catch(e){}
+        }
+
+        function isFreePlay() {
+            const el = document.getElementById('freePlayChk');
+            return el && el.checked;
+        }
+
+        function renderCredits() {
+            const el = document.getElementById('creditsText');
+            if (!el) return;
+            if (isFreePlay()) { el.textContent = 'Pudding Time!'; return; }
+            const daily = loadDailyCredit();
+            const extra = getPersistentCredits();
+            el.textContent = `Today: ${daily} | Extra: ${extra}`;
+        }
+
+        function consumeCredit() {
+            if (isFreePlay()) return true;
+            let daily = loadDailyCredit();
+            if (daily > 0) { daily--; saveDailyCredit(daily); renderCredits(); return true; }
+            let extra = getPersistentCredits();
+            if (extra > 0) { extra--; setPersistentCredits(extra); renderCredits(); return true; }
+            return false;
+        }
+
+        function addDailyCredit() {
+            // add one persistent credit (does not expire)
+            const extra = getPersistentCredits() + 1;
+            setPersistentCredits(extra);
+            renderCredits();
+        }
+
+        // initialize checkbox and UI and auto-grant daily credit if missing
+        document.addEventListener('DOMContentLoaded', () => {
+            const chk = document.getElementById('freePlayChk');
+            if (chk) chk.addEventListener('change', renderCredits);
+            // auto-grant one daily credit only if we have NEVER set today's key yet
+            try {
+                if (!isFreePlay()) {
+                    const key = getTodayKey();
+                    // only grant if the key is completely missing (null). If the key exists and is 0
+                    // that means the user already received today's grant earlier and spent it; do not re-grant.
+                    if (localStorage.getItem(key) === null) {
+                        saveDailyCredit(1);
+                    }
+                }
+            } catch (e) { /* ignore */ }
+            renderCredits();
+        });
+
+        const ctx = w.getContext('2d');
+        const arrowEl = document.getElementById('arrow');
+        // position arrow centered above canvas
+        function positionArrow() {
+            const wrap = document.getElementById('canvasWrap');
+            const rect = wrap.getBoundingClientRect();
+            arrowEl.style.left = (rect.width / 2) + 'px';
+            arrowEl.style.top = '6px';
+            arrowEl.style.transform = 'translate(-50%, 0)';
+        }
+        positionArrow();
+        window.addEventListener('resize', positionArrow);
+        let lastRotForArrow = 0;
+
+        // Milk/fountain configuration (adjustable)
+        let milkThickness = 18; // base thickness in px
+        let milkSquirts = 7;   // number of squirting streams
+
+        // Lucky Day flags: pending = scheduled for next spin, active = affects outcome during spin,
+        // visual = shows flipped colors before/during the spin
+        let luckyFlipPending = false;
+        let luckyFlipActive = false;
+        let luckyVisual = false;
+
+        // compute rooster tile indices (pick 8 losing tiles, spread out)
+        const roosterIndices = (function () {
+            const desired = 8; // total rooster tiles on board
+            const losing = [];
+            for (let i = 0; i < labels.length; i++) if (labels[i] === '❌') losing.push(i);
+            if (losing.length <= desired) return losing.slice();
+
+            // Try to pick spread-out indices: use step spacing, with a small random offset
+            const picked = new Set();
+            const step = Math.floor(losing.length / desired) || 1;
+            for (let k = 0; k < desired; k++) {
+                const base = k * step;
+                const offset = Math.floor(Math.random() * Math.max(1, step));
+                const idx = losing[(base + offset) % losing.length];
+                picked.add(idx);
+            }
+
+            // If not enough unique picks, fall back to shuffle-and-take
+            if (picked.size < desired) {
+                const arr = losing.slice();
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr.slice(0, desired);
+            }
+
+            return Array.from(picked);
+        })();
+
+        // Detect if localStorage available
+        function hs() {
+            try {
+                localStorage.setItem('_', '1');
+                localStorage.removeItem('_');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        const l = hs();
+        st.textContent = l ? 'LocalStorage' : 'Cookie';
+
+        function gc(name) {
+            const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+
+        function sc(name, value) {
+            document.cookie = name + '=' + encodeURIComponent(value) + ';path=/;max-age=31536000';
+        }
+
+        let stats = JSON.parse((l ? localStorage.getItem('pr') : gc('pr')) || '{"spins":0,"wins":0,"jackpots":0,"streak":0,"lucky":0,"mystery":0,"extraTimestamps":[],"extraProgress":0}');
+
+        function save() {
+            const x = JSON.stringify(stats);
+            if (l) localStorage.setItem('pr', x);
+            else sc('pr', x);
+            render();
+        }
+
+        function render() {
+            s.textContent = stats.spins;
+            wi.textContent = stats.wins;
+            j.textContent = stats.jackpots;
+            m.textContent = stats.mystery || 0;
+            lk.textContent = stats.lucky || 0;
+            a1.className = stats.wins >= 1 ? '' : 'lock';
+            a2.className = stats.wins >= 10 ? '' : 'lock';
+            a3.className = stats.streak >= 5 ? '' : 'lock';
+            a4.className = stats.jackpots >= 1 ? '' : 'lock';
+            a5.className = stats.lucky >= 1 ? '' : 'lock';
+            updateStreakBoxes();
+            updateExtraBoxes();
+        }
+
+        render();
+        updateExtraBoxes();
+
+        // Secret: click header 7 times to reset stats
+        let tc = 0;
+        const t = document.getElementById('t');
+        if (t) {
+            t.onclick = () => {
+                if (++tc >= 7 && confirm('Stats wissen?')) {
+                    localStorage.removeItem('pr');
+                    sc('pr', '');
+                    location.reload();
+                }
+            };
+        }
+
+        // Draw wheel
+        function draw() {
+            try {
+                ctx.clearRect(0, 0, 700, 700);
+                // ensure normal composite and visible stroke defaults
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#222';
+                ctx.save();
+                ctx.translate(350, 350);
+                ctx.rotate(rot);
+
+                // debug: draw outer circle outline so we can see the wheel boundary
+                ctx.beginPath();
+                ctx.arc(0, 0, 322, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.stroke();
+
+                for (let i = 0; i < n; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.arc(0, 0, 320, i * arc, (i + 1) * arc);
+                    ctx.closePath();
+
+                    // Colors: normal mapping, but when Lucky Day is active we visually flip wins<>loses
+                    const winColor = '#ff69b4';
+                    const autoColor = '#8fd3ff';
+                    const mysteryColor = '#c490ff';
+                    const loseColor = '#ffe08a';
+
+                    let c;
+                    if (luckyFlipActive || luckyVisual) {
+                        // On Lucky Day active: winning tiles become loseColor.
+                        // Exclude the Auto-Spin (🔄) tile from becoming a winning color — keep its autoColor.
+                        if (labels[i] === '🍆') {
+                            c = loseColor;
+                        } else if (labels[i] === '🔄') {
+                            c = autoColor;
+                        } else {
+                            c = winColor;
+                        }
+                    } else {
+                        c = labels[i] === '🍆' ? winColor : labels[i] === '🔄' ? autoColor : labels[i] === '🪄' ? mysteryColor : loseColor;
+                    }
+                    // safety fallback in case c is undefined for any reason
+                    if (!c) c = loseColor;
+                    // Debug: optionally override with distinct hue per sector to verify drawing
+                    const debugHue = false; // set true temporarily to see each sector
+                    if (debugHue) c = `hsl(${Math.round(i * (360 / n))} 70% 60%)`;
+                    ctx.fillStyle = c;
+                    ctx.fill();
+                    // ensure a visible stroke for each sector
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = '#333';
+                    ctx.stroke();
+
+                    // choose readable text color against the sector
+                    function hexToRgb(hex) {
+                        const m = hex.replace('#', '');
+                        const r = parseInt(m.substring(0, 2), 16);
+                        const g = parseInt(m.substring(2, 4), 16);
+                        const b = parseInt(m.substring(4, 6), 16);
+                        return { r, g, b };
+                    }
+
+                    function readableTextColor(hex) {
+                        const { r, g, b } = hexToRgb(hex);
+                        // luminance formula
+                        const lum = (r * 299 + g * 587 + b * 114) / 1000;
+                        return lum > 150 ? '#000' : '#fff';
+                    }
+
+                    ctx.save();
+                    ctx.rotate(i * arc + arc / 2);
+                    ctx.translate(240, 0);
+                    ctx.font = '28px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = readableTextColor(c);
+                    ctx.fillText(labels[i], 0, 0);
+                    // draw rooster icon if this sector is one of the roosterIndices
+                    ctx.restore();
+                    if (roosterIndices.includes(i)) {
+                        ctx.save();
+                        ctx.rotate(i * arc + arc / 2);
+                        ctx.translate(180, 0);
+                        ctx.font = '22px sans-serif';
+                        ctx.fillStyle = '#333';
+                        ctx.fillText('🐓', 0, 0);
+                        ctx.restore();
+                    }
+                }
+
+                ctx.restore();
+            } catch (e) {
+                console.error('draw() error', e);
+            }
+        }
+
+        // Arrow wiggle animation: update rotation of the arrow element based on wheel speed
+        function updateArrow(t) {
+            if (!arrowEl) return;
+            // compute angular velocity from change in rot
+            const delta = rot - lastRotForArrow;
+            // normalize delta to [-PI, PI]
+            let d = ((delta + Math.PI) % (Math.PI * 2)) - Math.PI;
+            const speed = Math.min(10, Math.abs(d) * 8); // map to a usable speed factor
+            const maxAngle = 12 * (Math.PI / 180); // 12 degrees max
+            // wiggle amplitude scales with speed
+            const amp = Math.min(maxAngle, maxAngle * (speed / 10));
+            // create a time-based wiggle influenced by current rot
+            const phase = (performance.now() / 100) * (1 + speed);
+            const angle = Math.sin(phase) * amp;
+            arrowEl.style.transform = `translateY(-8px) rotate(${angle}rad)`;
+            lastRotForArrow = rot;
+        }
+
+        draw();
+
+        function pop(title, msg) {
+            pt.textContent = title;
+            pm.textContent = msg;
+            popup.style.display = 'block';
+        }
+
+        function mystery() {
+            const arr = ['🍆 Bonus Creampie', '🔄 Extra Spin', '🌈 Lucky Day', '😢 Helaas niets'];
+            // return random when called normally, but if we want to animate we will
+            // call animateMysterySequence which will decide the final item and return it.
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        // Replace carousel with a mini spinning wheel showing only mystery options.
+        // Returns a Promise resolving the chosen item string.
+        function animateMysterySequence(finalPick = null) {
+            return new Promise(res => {
+                const overlay = document.getElementById('mysteryOverlay');
+                if (!overlay) { res(finalPick); return; }
+
+                // Define choices and create a small canvas wheel inside the overlay
+                const choices = ['🍆 Bonus Creampie','🔄 Extra Spin','🌈 Lucky Day','😢 Helaas niets'];
+                const miniScale = 1; // 40% of main
+
+                // Build mini canvas container
+                const container = document.createElement('div');
+                container.style.width = Math.round(700 * miniScale) + 'px';
+                container.style.height = Math.round(700 * miniScale) + 'px';
+                container.style.display = 'flex';
+                container.style.alignItems = 'center';
+                container.style.justifyContent = 'center';
+
+                const c = document.createElement('canvas');
+                c.width = Math.round(300 * miniScale);
+                c.height = Math.round(300 * miniScale);
+                container.appendChild(c);
+
+                const content = document.getElementById('mysteryContent');
+                content.innerHTML = '';
+                content.appendChild(container);
+
+                overlay.classList.add('show');
+                overlay.setAttribute('aria-hidden','false');
+
+                const ctxMini = c.getContext('2d');
+                const n = choices.length;
+                const arc = Math.PI * 2 / n;
+                let rot = 0;
+
+                function drawMini() {
+                    ctxMini.clearRect(0,0,c.width,c.height);
+                    ctxMini.save();
+                    ctxMini.translate(c.width/2, c.height/2);
+                    ctxMini.rotate(rot);
+                    const r = c.width/2 - 6;
+                    for (let i=0;i<n;i++) {
+                        ctxMini.beginPath();
+                        ctxMini.moveTo(0,0);
+                        ctxMini.arc(0,0,r,i*arc,(i+1)*arc);
+                        ctxMini.closePath();
+                        ctxMini.fillStyle = i%2===0 ? '#fff' : '#eee';
+                        ctxMini.fill();
+                        ctxMini.strokeStyle = '#ddd';
+                        ctxMini.stroke();
+                        // draw label (emoji only for clarity)
+                        ctxMini.save();
+                        ctxMini.rotate(i*arc + arc/2);
+                        ctxMini.translate(r*0.6,0);
+                        ctxMini.rotate(Math.PI/2);
+                        ctxMini.fillStyle = '#333';
+                        ctxMini.font = `${Math.round(14 * miniScale)}px sans-serif`;
+                        const label = choices[i].split(' ')[0];
+                        ctxMini.fillText(label, -ctxMini.measureText(label).width/2, 0);
+                        ctxMini.restore();
+                    }
+                    ctxMini.restore();
+                }
+
+                // Spin to land on selected index
+                const targetIndex = finalPick ? choices.indexOf(finalPick) : Math.floor(Math.random()*choices.length);
+                const landing = targetIndex * arc + arc/2;
+                const start = performance.now();
+                const duration = 1800 + Math.random()*1200;
+                const sr = 0;
+                const end = sr + Math.PI * 2 * 6 + ((-Math.PI/2 - landing) - (sr % (Math.PI * 2)));
+
+                function an(t) {
+                    const p = Math.min((t - start)/duration, 1);
+                    rot = sr + (end - sr) * (1 - Math.pow(1-p, 5));
+                    drawMini();
+                    if (p < 1) requestAnimationFrame(an);
+                    else {
+                        // keep the mini wheel visible for 4 seconds after spin ends
+                        setTimeout(() => {
+                            overlay.classList.remove('show');
+                            overlay.setAttribute('aria-hidden','true');
+                            // restore mysteryContent to default markup
+                            const mc = document.getElementById('mysteryContent');
+                            mc.innerHTML = '<div id="mysteryTrackContainer" style="position:relative;width:100%;height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden;perspective:800px;"><div id="mysteryTrack" style="display:flex;align-items:center;gap:18px;will-change:transform;"></div></div>';
+                            res(choices[targetIndex]);
+                        }, 4000);
+                    }
+                }
+
+                requestAnimationFrame(an);
+            });
+        }
+        // Extra-game streak utilities: cleanup timestamps older than 7 days
+        function cleanupExtraTimestamps() {
+            const now = Date.now();
+            const week = 7 * 24 * 60 * 60 * 1000;
+            if (!Array.isArray(stats.extraTimestamps)) stats.extraTimestamps = [];
+            stats.extraTimestamps = stats.extraTimestamps.filter(ts => (now - ts) < week);
+            stats.extraProgress = stats.extraTimestamps.length;
+        }
+
+        // Ensure at most one rooster collection per calendar day
+        function canCollectRooster() {
+            if (!stats.lastRoosterCollected) return true;
+            const last = new Date(stats.lastRoosterCollected);
+            const now = new Date();
+            return last.toDateString() !== now.toDateString();
+        }
+
+        // call cleanup on load
+        cleanupExtraTimestamps();
+
+        // Tool / forced-selection state
+        let forcedMode = null; // e.g. '🍆', '🔄', '🪄', '🎰', '❌' or 'normal'
+        let forcedIndex = null; // specific tile index
+
+        // Lucky Day flip flags (declared above before draw)
+
+        const toolEl = document.getElementById('tool');
+        const toolMenu = document.getElementById('toolMenu');
+        const forcedIndicatorEl = document.getElementById('forcedIndicator');
+        const specificSelect = document.getElementById('specificSelect');
+
+        function updateForcedIndicator() {
+            if (forcedIndex !== null) {
+                forcedIndicatorEl.textContent = `Tile ${forcedIndex} (${labels[forcedIndex]})`;
+            } else if (luckyVisual || luckyFlipPending) {
+                forcedIndicatorEl.textContent = '🌈 Lucky Day';
+            } else if (forcedMode && forcedMode !== 'normal') {
+                forcedIndicatorEl.textContent = forcedMode;
+            } else {
+                forcedIndicatorEl.textContent = 'Geen';
+            }
+        }
+
+        toolEl.addEventListener('click', () => {
+            const visible = toolMenu.style.display === 'block';
+            toolMenu.style.display = visible ? 'none' : 'block';
+            toolMenu.setAttribute('aria-hidden', visible ? 'true' : 'false');
+        });
+
+        function populateSpecific() {
+            for (let i = 0; i < n; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.text = `${i} - ${labels[i]}`;
+                specificSelect.appendChild(opt);
+            }
+        }
+
+        populateSpecific();
+
+        // Haptic helpers
+        function canVibrate() {
+            return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+        }
+
+        function vibrate(pattern) {
+            try {
+                if (canVibrate()) navigator.vibrate(pattern);
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        function triggerSectorVibration(isWinSector) {
+            if (!canVibrate()) return;
+            // gentle tick vs stronger tick
+            if (isWinSector) vibrate(80);
+            else vibrate(30);
+            // also play tick sound
+            try { playTick(isWinSector); } catch (e) {}
+        }
+
+        async function runWinVibrationSequence() {
+            if (!canVibrate()) return;
+            const soft = 70; const hard = 190;
+            for (let r = 0; r < 3; r++) {
+                // soft, soft, hard
+                vibrate(soft);
+                await new Promise(res => setTimeout(res, 200));
+                vibrate(soft);
+                await new Promise(res => setTimeout(res, 300));
+                vibrate(soft);
+                await new Promise(res => setTimeout(res, 200));
+                vibrate(soft);
+                await new Promise(res => setTimeout(res, 550));
+                vibrate(hard);
+                await new Promise(res => setTimeout(res, 750));
+                // random pause between 500-1500ms
+                const pause = 500 + Math.floor(Math.random() * 1000);
+                await new Promise(res => setTimeout(res, pause));
+            }
+        }
+        // Audio helpers (synthesized tick using WebAudio)
+        let __audioCtx = null;
+        function ensureAudio() {
+            try {
+                if (!__audioCtx) {
+                    __audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (__audioCtx.state === 'suspended') __audioCtx.resume();
+                return __audioCtx;
+            } catch (e) {
+                __audioCtx = null;
+                return null;
+            }
+        }
+
+        function playTick(isWin) {
+            const ctx = ensureAudio();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            // win tick: lower pitch and longer decay; normal tick: higher pitch, short
+            o.type = 'square';
+            o.frequency.value = isWin ? 560 : 1000;
+            o.connect(g);
+            g.connect(ctx.destination);
+            // envelope
+            g.gain.setValueAtTime(0.0001, now);
+            g.gain.exponentialRampToValueAtTime(isWin ? 0.25 : 0.18, now + 0.002);
+            const stopAt = now + (isWin ? 0.12 : 0.06);
+            g.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+            o.start(now);
+            o.stop(stopAt + 0.02);
+        }
+
+        // Vibration state for the spinning wheel
+        let spinningVibrationActive = false;
+        let lastSector = null;
+
+        // Lucky visual flag is declared above
+
+        function showLuckyOverlay(mode, duration = 4000, cb) {
+            const overlay = document.getElementById('luckyOverlay');
+            const content = document.getElementById('luckyContent');
+            const text = document.getElementById('luckyOverlayText');
+            if (!overlay || !content || !text) { if (cb) cb(); return; }
+            text.textContent = mode === 'start' ? '🌈 LUCKY DAY ENABLED' : '🌈 LUCKY DAY DISABLED';
+            content.classList.toggle('stop', mode === 'stop');
+            overlay.classList.add('show');
+            overlay.setAttribute('aria-hidden', 'false');
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                overlay.setAttribute('aria-hidden', 'true');
+                content.classList.remove('stop');
+                if (cb) cb();
+            }, duration);
+        }
+
+        // Overlay manager: queue full-screen overlays so they don't collide
+        const overlayQueue = [];
+        let overlayRunning = false;
+
+        function enqueueOverlay(fn) {
+            overlayQueue.push(fn);
+            if (!overlayRunning) runOverlayQueue();
+        }
+
+        async function runOverlayQueue() {
+            overlayRunning = true;
+            while (overlayQueue.length) {
+                const fn = overlayQueue.shift();
+                try {
+                    await fn();
+                } catch (e) {
+                    console.error('overlay error', e);
+                }
+            }
+            overlayRunning = false;
+        }
+
+        function showJackpotOverlay(cb) {
+            // wrap existing behavior into a Promise-returning function for queueing
+            return new Promise(res => {
+                const fn = () => new Promise(done => {
+                    const overlay = document.getElementById('luckyOverlay');
+                    const content = document.getElementById('luckyContent');
+                    const text = document.getElementById('luckyOverlayText');
+                    if (!overlay || !content || !text) { if (cb) cb(); done(); return res(); }
+                    text.textContent = '🎰 JACKPOT\nJij wint 7 dagen all-you-can-ride!';
+                    content.classList.remove('stop');
+                    overlay.classList.add('show');
+                    overlay.setAttribute('aria-hidden', 'false');
+                    setTimeout(() => {
+                        overlay.classList.remove('show');
+                        overlay.setAttribute('aria-hidden', 'true');
+                        if (cb) cb();
+                        done();
+                        res();
+                    }, 10000);
+                });
+                enqueueOverlay(fn);
+            });
+        }
+        function showExtraOverlay(textStr, duration = 10000, cb) {
+            const overlay = document.getElementById('luckyOverlay');
+            const content = document.getElementById('luckyContent');
+            const text = document.getElementById('luckyOverlayText');
+            if (!overlay || !content || !text) { if (cb) cb(); return; }
+            text.textContent = textStr;
+            content.classList.remove('stop');
+            overlay.classList.add('show');
+            overlay.setAttribute('aria-hidden', 'false');
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                overlay.setAttribute('aria-hidden', 'true');
+                if (cb) cb();
+            }, duration);
+        }
+
+        // Sequence of three rainbow text overlays for wins: CREAM! / THAT! / PIE!
+        function sleep(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+        async function showCreamSequence() {
+            const overlay = document.getElementById('luckyOverlay');
+            const content = document.getElementById('luckyContent');
+            const text = document.getElementById('luckyOverlayText');
+            if (!overlay || !content || !text) return;
+
+            const items = ['C R E A M !', 'T H A T !', 'P I E !'];
+            // ensure rainbow animation active
+            content.classList.remove('stop');
+
+            // use 0.5s fade, 1.5s steady, 0.5s fade = 2.5s per item
+            const fade = 175;
+            const steady = 350;
+            // override overlay transition to match fade duration
+            overlay.style.transition = `opacity ${fade}ms ease`;
+
+            // Queue this full-screen overlay sequence so it doesn't collide with jackpot overlay
+            return new Promise(res => {
+                const fn = async () => {
+                    overlay.setAttribute('aria-hidden', 'false');
+                    for (const t of items) {
+                        text.textContent = t;
+                        overlay.classList.add('show');
+                        await sleep(fade + steady);
+                        overlay.classList.remove('show');
+                        await sleep(fade);
+                    }
+                    overlay.setAttribute('aria-hidden', 'true');
+                    overlay.style.transition = '';
+                };
+                enqueueOverlay(fn);
+                res();
+            });
+        }
+
+        // Show rooster-win overlay when 4 roosters collected
+        function showRoosterOverlay() {
+            const overlay = document.getElementById('luckyOverlay');
+            const content = document.getElementById('luckyContent');
+            const text = document.getElementById('luckyOverlayText');
+            if (!overlay || !content || !text) return;
+
+            // Prepare text (two lines centered)
+            text.textContent = 'WIN ! WIN ! WIN!\n- - SPIN 4x ACHTER ELKAAR ! - -';
+            content.classList.remove('stop');
+            // set transition to 250ms fade
+            overlay.style.transition = 'opacity 250ms ease';
+            overlay.setAttribute('aria-hidden', 'false');
+            // fade in
+            overlay.classList.add('show');
+            // hold steady for 4000ms then fade out over 250ms
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                setTimeout(() => {
+                    overlay.setAttribute('aria-hidden', 'true');
+                    overlay.style.transition = '';
+                }, 250);
+            }, 250 + 6000);
+        }
+
+        function startLuckySequence() {
+            // show Enabled animation, then flip visuals and schedule the next spin to be Lucky
+            showLuckyOverlay('start', 4000, () => {
+                luckyFlipPending = true;
+                luckyVisual = true; // visually flip tiles so next spin is ready
+                updateForcedIndicator();
+                draw();
+            });
+        }
+
+        function endLuckySequence() {
+            // show Disabled animation, then clear visual flip
+            showLuckyOverlay('stop', 4000, () => {
+                luckyVisual = false;
+                updateForcedIndicator();
+                draw();
+            });
+        }
+
+        function updateStreakBoxes() {
+            const b1 = document.getElementById('streak1');
+            const b2 = document.getElementById('streak2');
+            const b3 = document.getElementById('streak3');
+            if (!b1 || !b2 || !b3) return;
+            // clear all
+            [b1, b2, b3].forEach(b => { b.classList.remove('active'); b.textContent = ''; });
+            if (stats.streak >= 1) { b1.classList.add('active'); b1.textContent = '🎰'; }
+            if (stats.streak >= 2) { b2.classList.add('active'); b2.textContent = '🎰'; }
+            if (stats.streak >= 3) { b3.classList.add('active'); b3.textContent = '🎰'; }
+            // if streak broken (0) this will clear them via render()
+        }
+
+        function updateExtraBoxes() {
+            const ids = ['extra1', 'extra2', 'extra3', 'extra4'];
+            // clear extras
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.classList.remove('active'); el.textContent = ''; }
+            });
+            // ensure timestamps are current
+            cleanupExtraTimestamps();
+            const progress = stats.extraProgress || 0;
+            // fill boxes according to progress (oldest -> newest from left to right)
+            for (let i = 0; i < Math.min(progress, ids.length); i++) {
+                const el = document.getElementById(ids[i]);
+                if (el) {
+                    el.classList.add('active');
+                    // show rooster icon for extra-game streak boxes
+                    el.textContent = '🐓';
+                }
+            }
+        }
+
+        function setForcedMode(mode) {
+            // special-case Lucky Day maintenance trigger: start the Lucky Day sequence now
+            if (mode === '🌈') {
+                startLuckySequence();
+                toolMenu.style.display = 'none';
+                return;
+            }
+
+            forcedMode = mode;
+            forcedIndex = null;
+            updateForcedIndicator();
+            toolMenu.style.display = 'none';
+        }
+
+        function setForcedSpecific() {
+            const idx = parseInt(specificSelect.value, 10);
+            if (!isNaN(idx)) {
+                forcedIndex = idx;
+                forcedMode = null;
+                // forcedLucky removed; start sequence directly via menu if needed
+                updateForcedIndicator();
+                toolMenu.style.display = 'none';
+            }
+        }
+
+        function computeTargetForNextSpin() {
+            // specific tile selection
+            if (forcedIndex !== null) {
+                const t = forcedIndex;
+                forcedIndex = null;
+                forcedMode = null;
+                updateForcedIndicator();
+                return t;
+            }
+
+
+            // forced mode matching an existing label
+            if (forcedMode && forcedMode !== 'normal') {
+                const candidates = [];
+                for (let i = 0; i < n; i++) if (labels[i] === forcedMode) candidates.push(i);
+                if (candidates.length) {
+                    const t = candidates[Math.floor(Math.random() * candidates.length)];
+                    forcedMode = null;
+                    updateForcedIndicator();
+                    return t;
+                }
+            }
+
+            return Math.floor(Math.random() * n);
+        }
+
+        // Spin logic (uses forced selection if set). Also activates pending Lucky Day flips.
+        spin.onclick = () => {
+            // consume a credit unless free play
+            if (!consumeCredit()) {
+                // show rainbow overlay instead of alert
+                showExtraOverlay('Cum back tomorrow for new credits', 9000);
+                return;
+            }
+            renderCredits();
+            spin.disabled = true;
+            r.textContent = 'Resultaat: ';
+            // disable only the button and change its appearance/text while spinning
+            spin.classList.add('spinning');
+            spin.textContent = 'SPINNING!';
+
+            // If a Lucky Day was scheduled, activate it for this spin
+            if (luckyFlipPending) {
+                luckyFlipActive = true;
+                luckyFlipPending = false;
+                updateForcedIndicator();
+            } else {
+                luckyFlipActive = false;
+            }
+
+            const target = computeTargetForNextSpin();
+            const landing = target * arc + arc / 2;
+            const end = rot + Math.PI * 2 * 12 + ((-Math.PI / 2 - landing) - (rot % (Math.PI * 2)));
+            const sr = rot;
+            // Introduce variability by randomizing the final deceleration behavior
+            // without adding rotational jitter. We randomly choose whether the wheel
+            // eases out more slowly or more quickly in the final phase so the
+            // stopping time isn't trivially predictable.
+            const baseDuration = 6000;
+            const totalDuration = Math.max(3500, baseDuration + (Math.random() * 2000 - 500));
+            const t0 = performance.now();
+
+            // finalEaseFactor controls how 'soft' the easing is near the end.
+            // Values >1 make the end slower (longer tail), values <1 make it quicker.
+            const finalEaseFactor = 0.7 + Math.random() * 1.2; // range ~0.7 - 1.9
+
+            function easedProgress(p) {
+                // modify ease curve to vary deceleration: blend base ease with pow curve influenced by finalEaseFactor
+                // base easing
+                const base = 1 - Math.pow(1 - p, 5);
+                // factor-in finalEase to slow down or speed up near the end
+                return 1 - Math.pow(1 - base, finalEaseFactor);
+            }
+
+            function an(ti) {
+                const elapsed = ti - t0;
+                const p = Math.min(elapsed / totalDuration, 1);
+                const eased = easedProgress(p);
+                rot = sr + (end - sr) * eased;
+
+                // Determine current angular position and which sector is under the pointer
+                const currentAngle = (rot + (Math.PI * 2)) % (Math.PI * 2);
+                const sector = Math.floor(((currentAngle + Math.PI/2) % (Math.PI*2)) / arc);
+                const isWinSector = (labels[(n - sector) % n] && (labels[(n - sector) % n].includes('🍆') || labels[(n - sector) % n].includes('Pudding') || labels[(n - sector) % n].includes('Creampie')));
+
+                draw();
+                updateArrow(ti);
+
+                // Trigger gentle tick vibration on sector crossings. Use precise sector crossing detection
+                if (canVibrate()) {
+                    const angle = (rot + Math.PI * 2) % (Math.PI * 2);
+                    // compute which sector is under the pointer (index)
+                    const pointerAngle = (Math.PI * 2 + (Math.PI / 2) - angle) % (Math.PI * 2);
+                    const sectorIdx = Math.floor(pointerAngle / arc);
+                    if (spinningVibrationActive) {
+                        if (lastSector === null) lastSector = sectorIdx;
+                        // detect crossing to a new sector
+                        if (sectorIdx !== lastSector) {
+                            triggerSectorVibration((labels[(n - sectorIdx) % n] || '').includes('🍆'));
+                            lastSector = sectorIdx;
+                        }
+                    }
+                }
+                if (p < 1) requestAnimationFrame(an);
+                else {
+                    // stop sector vibration tracking
+                    spinningVibrationActive = false;
+                    lastSector = null;
+                    finish(target);
+                }
+            }
+
+            spinningVibrationActive = true;
+            lastSector = null;
+            requestAnimationFrame(an);
+        };
+        // what to do when the spin stops on XXX
+        async function finish(target) {
+            let out = labels[target];
+
+            // If landed on a mystery tile, run the animated carousel and use its result
+            if (labels[target] === '🪄') {
+                // increment mystery stat once
+                stats.mystery = (stats.mystery || 0) + 1;
+                try {
+                    const animResult = await animateMysterySequence();
+                    if (animResult) out = animResult;
+                } catch (e) {
+                    console.error('mystery animation failed', e);
+                    // fallback to random pick
+                    out = mystery();
+                }
+            }
+
+            if (out === '❌') { showExtraOverlay('Not Today!', 2000); }
+
+            // If this result was an auto-spin, there is a 1/10 chance to trigger Lucky Day
+            if (out === '🔄') {
+                if (Math.random() < 1 / 10) {
+                    stats.lucky++;
+                    startLuckySequence();
+                }
+            }
+
+            // If mystery returned a Lucky Day, schedule the flip for the next spin
+            if (out === '🌈 Lucky Day') {
+                stats.lucky++;
+                // Add credit for the spin
+                addDailyCredit();
+                startLuckySequence();
+            }
+
+            // Auto-spin handling: show rainbow "AUTO SPIN!" overlay for 2.5s
+            // and immediately start the next spin while the animation plays.
+            if (out === '🔄' || out.includes('Extra Spin')) {
+                // Add credit for the spin
+                addDailyCredit();
+                // show rainbow overlay for 2.5s
+                showExtraOverlay('AUTO SPIN!', 3000);
+                // start the auto spin immediately (while overlay is visible)
+                setTimeout(() => { try { spin.click(); } catch (e) { console.error(e); } }, 2250);
+            }
+
+            // Add a statistic entry for this spin (total spins)
+            stats.spins++;
+
+            // Determine win status, taking Lucky Day flip into account. WINNER WIN
+            const originalIsWin = (out.includes('🍆') || out.includes('Creampie'));
+            const isWin = luckyFlipActive ? !originalIsWin : originalIsWin;
+
+            if (isWin) {
+                stats.wins++;
+                stats.streak++;
+                // Add credit for the spin
+                addDailyCredit();
+                // run animation
+                showCreamSequence();
+                // run win vibration sequence
+                runWinVibrationSequence();
+                //showRoosterOverlay()
+
+            } else {
+                stats.streak = 0;
+                // losing vibration: long 1000ms buzz
+                vibrate(1000);
+            }
+
+            // If landed on a rooster tile, add to extra-game streakboxes
+            if (roosterIndices.includes(target)) {
+                // only allow one rooster collection per day
+                if (canCollectRooster()) {
+                    // add timestamp if not already full
+                    cleanupExtraTimestamps();
+                    if (stats.extraProgress < 4) {
+                        stats.extraTimestamps.push(Date.now());
+                        stats.extraProgress = stats.extraTimestamps.length;
+                        stats.lastRoosterCollected = Date.now();
+                        save();
+                        // if reached 4, show rainbow popup for 10s
+                        if (stats.extraProgress === 4) {
+                            // show rooster overlay then reset only the rooster-related progress
+                            // Add credit for the spin
+                            addDailyCredit();
+                            addDailyCredit();
+                            addDailyCredit();
+                            addDailyCredit();
+                            enqueueOverlay(async () => showRoosterOverlay());
+                            enqueueOverlay(async () => {
+                                // clear only the extra-game streak data
+                                stats.extraTimestamps = [];
+                                stats.extraProgress = 0;
+                                stats.lastRoosterCollected = null;
+                                // persist changes
+                                if (l) localStorage.setItem('pr', JSON.stringify(stats)); else sc('pr', JSON.stringify(stats));
+                                render();
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Trigger jackpot only when streak JUST reached 3
+            if (stats.streak === 3) {
+                stats.jackpots++;
+                // save first so boxes update
+                save();
+                showJackpotOverlay(() => {
+                    // after overlay ends nothing special; streak remains set unless you want reset
+                });
+            }
+
+            // Save and show result
+            save();
+            r.textContent = 'Resultaat: ' + out;
+            spin.disabled = false;
+            // restore button state
+            spin.classList.remove('spinning');
+            spin.textContent = 'SPIN THE WHEEL';
+
+            // If Lucky Day visuals were active for this spin, end the Lucky Day sequence (animate stop and revert colors)
+            const hadLuckyVisual = luckyFlipActive || luckyVisual;
+            // Clear the active flag used for outcome logic
+            luckyFlipActive = false;
+            if (hadLuckyVisual) {
+                // schedule end of lucky visual after a delay
+                setTimeout(endLuckySequence, 15000);
+            }
+
+        }</script>
+
+</body>
+
+</html>
