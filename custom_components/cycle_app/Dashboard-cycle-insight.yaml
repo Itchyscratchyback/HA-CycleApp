@@ -182,9 +182,14 @@ views:
                   action: more-info
                 entity: sensor.predicted_ovulation_date
                 secondary: |2-
-                    {% set v = states('sensor.days_to_ovulation') | float %}
-                    {% if v > -5 %}
-                      {{ v }} Day
+                    {% set s = states('sensor.days_to_ovulation') %}
+                    {% if s not in ['unknown','unavailable','', none] %}
+                      {% set v = s | float(999) %}
+                      {% if v > -5 %}
+                        {{ v }} Day
+                      {% else %}
+                        {{ states('sensor.days_to_next_ovulation_date') }}
+                      {% endif %}
                     {% else %}
                       {{ states('sensor.days_to_next_ovulation_date') }}
                     {% endif %}

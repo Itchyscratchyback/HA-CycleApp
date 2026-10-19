@@ -1241,7 +1241,7 @@ automation:
             {% if current in ['unknown','unavailable',''] %}
               {{ entry }}
             {% else %}
-              {{ current ~ ',' ~ entry }}
+              {{ entry }}
             {% endif %}
 
       # Also append the new entry to the persisted history file (NDJSON)
@@ -1279,10 +1279,12 @@ automation:
         data:
           filename: "data/ha_cycle_app/intercourse_history.json"
           entity_id: input_text.intercourse_history
+          limit: 50
       - service: cycle_app.load_history
         data:
           filename: "data/ha_cycle_app/period_start_history.json"
           entity_id: input_text.period_start_history
+          limit: 100
 
 # AUTOMATION: PERIOD STARTED 
 # ##############################################################################
