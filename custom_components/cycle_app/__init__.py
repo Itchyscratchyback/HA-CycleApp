@@ -106,8 +106,8 @@ async def async_setup_entry(hass, entry):
         hass.services.call("input_text", "set_value", {"entity_id": entity_id, "value": content})
         _LOGGER.info("load_history: loaded into %s", entity_id)
 
-    hass.services.register(DOMAIN, "save_history", handle_save)
-    hass.services.register(DOMAIN, "load_history", handle_load)
+    hass.services.async_register(DOMAIN, "save_history", handle_save)
+    hass.services.async_register(DOMAIN, "load_history", handle_load)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = True
     return True
 
