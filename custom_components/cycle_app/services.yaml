@@ -1,0 +1,30 @@
+save_history:
+  name: Save history
+  description: "Save a content string to a file under Home Assistant config."
+  fields:
+    filename:
+      description: "Path relative to Home Assistant config directory where the data will be saved (e.g., data/ha_cycle_app/intercourse_history.json)."
+      example: "data/ha_cycle_app/intercourse_history.json"
+    content:
+      description: "The string content to save (for NDJSON append use as_json: true and append: true)."
+      example: "2026-10-12T06:40:47|1"
+    as_json:
+      description: "If true, content will be wrapped into a JSON object when writing. When append=true, each line will be a JSON object (NDJSON)."
+      example: true
+    append:
+      description: "If true, append to the file instead of overwriting. Use with as_json=true to append NDJSON lines."
+      example: true
+
+load_history:
+  name: Load history
+  description: "Load a saved history file and set the value of an input_text entity (optionally limited to the last N entries)."
+  fields:
+    filename:
+      description: "Path relative to Home Assistant config directory to read from."
+      example: "data/ha_cycle_app/intercourse_history.json"
+    entity_id:
+      description: "Input_text entity_id to populate (e.g., input_text.intercourse_history)."
+      example: "input_text.intercourse_history"
+    limit:
+      description: "Optional number of most recent entries to load into the entity."
+      example: 50
