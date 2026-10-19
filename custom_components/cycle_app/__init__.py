@@ -64,7 +64,7 @@ def _read(path):
             return raw
 
 
-def async_setup(hass, config):
+async def async_setup(hass, config):
     """Set up the cycle_app component.
 
     This component uses config entries; nothing to do at YAML setup time.
