@@ -1,0 +1,10 @@
+{
+  "domain": "cycle_app",
+  "name": "Cycle App Helper",
+  "version": "0.1.0",
+  "documentation": "",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [],
+  "config_flow": true
+}

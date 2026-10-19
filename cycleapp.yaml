@@ -114,6 +114,7 @@ template:
             unknown
           {% endif %}
 
+
       - name: Previous Period Start
         unique_id: previous_period_start
         device_class: date
@@ -1243,9 +1244,46 @@ automation:
               {{ current ~ ',' ~ entry }}
             {% endif %}
 
-
+      # Also append the new entry to the persisted history file (NDJSON)
+      - service: cycle_app.save_history
+        data:
+          filename: "data/ha_cycle_app/intercourse_history.json"
+          content: "{{ entry }}"
+          as_json: true
+          append: true
 
 # ##############################################################################
+# Save period_start_history to external file whenever it changes (append-only)
+  - alias: Persist Period Start History to File
+    id: persist_period_start_history
+    trigger:
+      - platform: state
+        entity_id: input_text.period_start_history
+    action:
+      - service: cycle_app.save_history
+        data:
+          filename: "data/ha_cycle_app/period_start_history.json"
+          content: "{{ trigger.to_state.state }}"
+          as_json: true
+          append: true
+
+# Load persisted histories on Home Assistant start
+  - alias: Load Persisted Histories at Startup
+    id: load_persisted_histories
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - delay: '00:00:30'
+      - service: cycle_app.load_history
+        data:
+          filename: "data/ha_cycle_app/intercourse_history.json"
+          entity_id: input_text.intercourse_history
+      - service: cycle_app.load_history
+        data:
+          filename: "data/ha_cycle_app/period_start_history.json"
+          entity_id: input_text.period_start_history
+
 # AUTOMATION: PERIOD STARTED 
 # ##############################################################################
 

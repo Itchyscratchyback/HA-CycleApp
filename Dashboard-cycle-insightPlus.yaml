@@ -232,14 +232,24 @@ views:
           - entity: sensor.intercourse_count_fertile_window
             name: Fertile Window Activity
       - type: custom:apexcharts-card
-        graph_span: 10d
+        graph_span: 30d
         header:
           show: true
           title: Activity Timeline
         apex_config:
           chart:
+            type: bar
             height: 350
             width: 500
+          plotOptions:
+            bar:
+              horizontal: false
+              columnWidth: '60%'
+          xaxis:
+            type: datetime
+          tooltip:
+            x:
+              format: 'dd MMM yyyy HH:mm'
           annotations:
             xaxis:
               - x: 1
@@ -263,10 +273,43 @@ views:
                 fillColor: '#6ecb63'
                 opacity: 0.1
         series:
-          - entity: sensor.intercourse_count_current_cycle
+          - entity: input_text.intercourse_history
             name: Activity Count
             color: '#ff6fa5'
-            stroke_width: 3
+            type: column
+            data_generator: |
+              const s = (entity.state||'').trim();
+              if (!s || ['unknown','unavailable','none','-'].includes(s.toLowerCase())) return [];
+              const parts = s.split(',').map(p => p.trim()).filter(Boolean);
+              const out = [];
+              for (const part of parts) {
+                let ts = part;
+                let val = 1;
+                if (part.includes('|')) {
+                  const split = part.split('|');
+                  ts = split[0] || ts;
+                  val = Number(split[1]);
+                  if (isNaN(val)) val = 1;
+                }
+                // Try strict ISO parse first
+                let ms = Date.parse(ts);
+                // Fallback: replace space with T (common formatting)
+                if (isNaN(ms)) ms = Date.parse(ts.replace(' ', 'T'));
+                // If still invalid, try parsing as YYYY-MM-DD manually (avoid timezone shifts)
+                if (isNaN(ms)) {
+                  const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                  if (m) {
+                    const y = Number(m[1]);
+                    const mo = Number(m[2]) - 1;
+                    const d = Number(m[3]);
+                    ms = Date.UTC(y, mo, d, 0, 0, 0);
+                  }
+                }
+                if (isNaN(ms)) continue;
+                out.push({ x: ms, y: val });
+              }
+              out.sort((a,b) => a.x - b.x);
+              return out;
       - type: markdown
         content: >
 
