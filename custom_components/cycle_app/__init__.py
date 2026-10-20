@@ -220,7 +220,8 @@ async def async_setup_entry(hass, entry):
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = True
     # Forward config entry to sensor platform so sensors are created
     try:
-        await hass.config_entries.async_forward_entry_setup(entry, "sensor")
+        # Use async_forward_entry_setups to forward setup to the sensor platform
+        await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
     except Exception:
         _LOGGER.exception("Failed to forward setup to sensor platform")
     return True
