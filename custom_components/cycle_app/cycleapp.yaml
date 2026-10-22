@@ -824,103 +824,6 @@ template:
 
 
 
-      - name: Intercourse Count Fertile Window
-        unique_id: intercourse_count_fertile_window
-
-        state: >
-
-          {% set entries =
-             states('input_text.intercourse_history')
-             .split(',')
-             | list
-          %}
-
-          {% set ovulation_day =
-             (
-               states('sensor.cycle_length_preferred')|int(28)
-               -
-               states('input_number.luteal_length')|int(14)
-             )
-          %}
-
-          {% set fertile_start = ovulation_day - 5 %}
-          {% set fertile_end = ovulation_day + 2 %}
-
-          {% set ns = namespace(count=0) %}
-
-          {% for item in entries %}
-
-            {% if '|' in item %}
-
-              {% set day =
-                 item.split('|')[1] | int(0)
-              %}
-
-              {% if fertile_start <= day <= fertile_end %}
-                {% set ns.count = ns.count + 1 %}
-              {% endif %}
-
-            {% endif %}
-
-          {% endfor %}
-
-          {{ ns.count }}
-
-
-      - name: Intercourse Count Current Cycle
-        unique_id: intercourse_count_current_cycle
-
-        state: >
-
-          {% set current_day =
-             states('sensor.cycle_day')|int(0)
-          %}
-
-          {% set entries =
-             states('input_text.intercourse_history')
-             .split(',')
-             | list
-          %}
-
-          {% set ns = namespace(count=0) %}
-
-          {% for item in entries %}
-
-            {% if '|' in item %}
-
-              {% set day =
-                 item.split('|')[1] | int(0)
-              %}
-
-              {% if day <= current_day %}
-                {% set ns.count = ns.count + 1 %}
-              {% endif %}
-
-            {% endif %}
-
-          {% endfor %}
-
-          {{ ns.count }}
-
-
-
-      - name: Last Intercourse Date
-        unique_id: last_intercourse_date
-
-        state: >
-
-          {% set entries =
-             states('input_text.intercourse_history')
-             .split(',')
-             | list
-          %}
-
-          {% if entries|length > 0 %}
-            {{ entries[-1].split('|')[0] }}
-          {% else %}
-            never
-          {% endif %}
-
       - name: Cycle Phase Color
         unique_id: cycle_phase_color
 
@@ -1279,7 +1182,7 @@ automation:
         data:
           filename: "data/ha_cycle_app/intercourse_history.json"
           entity_id: input_text.intercourse_history
-          limit: 50
+          limit: 1
       - service: cycle_app.load_history
         data:
           filename: "data/ha_cycle_app/period_start_history.json"

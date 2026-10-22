@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, date, timezone
 import json
-import os
 import logging
 from typing import Any
 
@@ -11,7 +10,6 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
-from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION
@@ -94,7 +92,7 @@ class HistoryCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict[str, Any]:
         # read file and parse entries
         try:
-            lines = _read_lines(self.path)
+            lines = await self.hass.async_add_executor_job(_read_lines, self.path)
             pts = []
             for l in lines:
                 parsed = _parse_entry(l)
@@ -158,30 +156,59 @@ class LastIntercourseDate(BaseHistorySensor):
 class IntercourseCountCurrentCycle(BaseHistorySensor):
     @property
     def state(self):
-        # Read directly from the file to ensure up-to-date counts
-        try:
-            lines = _read_lines(self.coordinator.path)
-        except Exception:
-            lines = []
-
         try:
             current_day = int(self.hass.states.get("sensor.cycle_day").state)
         except Exception:
             current_day = 0
 
+        try:
+            last_period = self.hass.states.get("sensor.last_period_start").state
+            cycle_start = int(datetime.fromisoformat(last_period).replace(
+                tzinfo=timezone.utc
+            ).timestamp() * 1000)
+        except Exception:
+            cycle_start = 0
+
         count = 0
-        for l in lines:
-            parsed = _parse_entry(l)
-            if not parsed:
-                continue
-            _, val = parsed
+        for point in self.coordinator.data.get("points", []):
             try:
-                day = int(val)
+                day = int(point.get("y", 0))
             except Exception:
                 day = 0
-            if day > 0 and day <= current_day:
+            if (
+                day > 0
+                and day <= current_day
+                and int(point.get("x", 0)) >= cycle_start
+            ):
                 count += 1
         return count
+
+
+class IntercourseCountFertileWindow(BaseHistorySensor):
+    @property
+    def state(self):
+        try:
+            cycle_length = int(
+                self.hass.states.get("sensor.cycle_length_preferred").state
+            )
+        except Exception:
+            cycle_length = 28
+        try:
+            luteal_length = int(
+                self.hass.states.get("input_number.luteal_length").state
+            )
+        except Exception:
+            luteal_length = 14
+
+        ovulation_day = cycle_length - luteal_length
+        fertile_start = ovulation_day - 5
+        fertile_end = ovulation_day + 2
+
+        return sum(
+            1
+            for point in self.coordinator.data.get("points", [])
+            if fertile_start <= int(point.get("y", 0)) <= fertile_end
+        )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
@@ -195,8 +222,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entities = [
         IntercourseHistoryCount(coordinator, "Intercourse History Count", f"{DOMAIN}_history_count"),
         IntercourseTimeline(coordinator, "Intercourse Timeline", f"{DOMAIN}_timeline"),
-        LastIntercourseDate(coordinator, "Last Intercourse Date", f"{DOMAIN}_last"),
-        IntercourseCountCurrentCycle(coordinator, "Intercourse Count Current Cycle", f"{DOMAIN}_count_current_cycle"),
+        LastIntercourseDate(coordinator, "Last Intercourse Date", "last_intercourse_date"),
+        IntercourseCountCurrentCycle(
+            coordinator,
+            "Intercourse Count Current Cycle",
+            "intercourse_count_current_cycle",
+        ),
+        IntercourseCountFertileWindow(
+            coordinator,
+            "Intercourse Count Fertile Window",
+            "intercourse_count_fertile_window",
+        ),
     ]
 
     async_add_entities(entities, update_before_add=False)

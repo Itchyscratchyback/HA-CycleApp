@@ -120,7 +120,9 @@ async def async_setup(hass, config):
             return
         path = hass.config.path(filename)
         try:
-            _write(path, content, as_json=as_json, append=append)
+            await hass.async_add_executor_job(
+                _write, path, content, as_json, append
+            )
             _LOGGER.info("save_history: wrote %s (append=%s) [yaml]", path, append)
         except Exception as e:
             _LOGGER.exception("save_history: failed to write %s: %s", path, e)
@@ -129,7 +131,7 @@ async def async_setup(hass, config):
         try:
             for coord in hass.data.get(DOMAIN, {}).values():
                 if hasattr(coord, "async_request_refresh"):
-                    hass.async_create_task(coord.async_request_refresh())
+                    await coord.async_request_refresh()
         except Exception:
             _LOGGER.debug("save_history: failed to notify coordinators")
 
@@ -141,7 +143,7 @@ async def async_setup(hass, config):
             _LOGGER.error("load_history: filename or entity_id missing")
             return
         path = hass.config.path(filename)
-        lines = _read_lines(path)
+        lines = await hass.async_add_executor_job(_read_lines, path)
         if not lines:
             _LOGGER.warning("load_history: file not found or empty %s", path)
             return
@@ -153,7 +155,12 @@ async def async_setup(hass, config):
         except Exception:
             _LOGGER.debug("load_history: invalid limit provided %s", limit)
         content = ",".join(lines)
-        hass.services.call("input_text", "set_value", {"entity_id": entity_id, "value": content})
+        await hass.services.async_call(
+            "input_text",
+            "set_value",
+            {"entity_id": entity_id, "value": content},
+            blocking=True,
+        )
         _LOGGER.info("load_history: loaded into %s [yaml]", entity_id)
 
     try:
@@ -168,7 +175,7 @@ async def async_setup(hass, config):
 async def async_setup_entry(hass, entry):
     """Set up a config entry and register services."""
 
-    def handle_save(call):
+    async def handle_save(call):
         filename = call.data.get("filename")
         content = call.data.get("content", "")
         as_json = call.data.get("as_json", True)
@@ -178,7 +185,9 @@ async def async_setup_entry(hass, entry):
             return
         path = hass.config.path(filename)
         try:
-            _write(path, content, as_json=as_json, append=append)
+            await hass.async_add_executor_job(
+                _write, path, content, as_json, append
+            )
             _LOGGER.info("save_history: wrote %s (append=%s)", path, append)
         except Exception as e:
             _LOGGER.exception("save_history: failed to write %s: %s", path, e)
@@ -186,11 +195,11 @@ async def async_setup_entry(hass, entry):
         try:
             for coord in hass.data.get(DOMAIN, {}).values():
                 if hasattr(coord, "async_request_refresh"):
-                    hass.async_create_task(coord.async_request_refresh())
+                    await coord.async_request_refresh()
         except Exception:
             _LOGGER.debug("save_history: failed to notify coordinators")
 
-    def handle_load(call):
+    async def handle_load(call):
         filename = call.data.get("filename")
         entity_id = call.data.get("entity_id")
         limit = call.data.get("limit")
@@ -198,7 +207,7 @@ async def async_setup_entry(hass, entry):
             _LOGGER.error("load_history: filename or entity_id missing")
             return
         path = hass.config.path(filename)
-        lines = _read_lines(path)
+        lines = await hass.async_add_executor_job(_read_lines, path)
         if not lines:
             _LOGGER.warning("load_history: file not found or empty %s", path)
             return
@@ -212,7 +221,12 @@ async def async_setup_entry(hass, entry):
             _LOGGER.debug("load_history: invalid limit provided %s", limit)
 
         content = ",".join(lines)
-        hass.services.call("input_text", "set_value", {"entity_id": entity_id, "value": content})
+        await hass.services.async_call(
+            "input_text",
+            "set_value",
+            {"entity_id": entity_id, "value": content},
+            blocking=True,
+        )
         _LOGGER.info("load_history: loaded into %s", entity_id)
 
     hass.services.async_register(DOMAIN, "save_history", handle_save)
