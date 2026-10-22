@@ -52,7 +52,10 @@ def _read(path):
         for line in lines:
             try:
                 obj = json.loads(line)
-                parts.append(obj.get("content", ""))
+                if obj.get("content"):
+                    parts.append(str(obj["content"]))
+                elif obj.get("timestamp") and obj.get("cycle_day") is not None:
+                    parts.append(f"{obj['timestamp']}|{obj['cycle_day']}")
             except Exception:
                 parts.append(line)
         return ",".join([p for p in parts if p])
@@ -91,7 +94,12 @@ def _read_lines(path):
     # Single-line: try JSON, else treat as comma-separated raw
     try:
         obj = json.loads(raw)
-        content = obj.get("content", raw)
+        if obj.get("content"):
+            content = str(obj["content"])
+        elif obj.get("timestamp") and obj.get("cycle_day") is not None:
+            content = f"{obj['timestamp']}|{obj['cycle_day']}"
+        else:
+            content = raw
         return [content] if content else []
     except Exception:
         if not raw:

@@ -342,14 +342,61 @@ views:
             entity: input_button.period_started
             name: Period Started
             icon: mdi:calendar-plus
-          - type: button
-            entity: input_button.log_intercourse
+          - type: custom:bubble-card
+            card_type: button
+            button_type: name
             name: Log Activity
             icon: mdi:heart
+            tap_action:
+              action: navigate
+              navigation_path: '#log_activity'
           - type: button
             entity: input_button.clear_intercourse_history
             name: Clear Activity
             icon: mdi:delete
+      - type: custom:bubble-card
+        card_type: pop-up
+        hash: '#log_activity'
+        name: Log Activity
+        icon: mdi:heart
+        cards:
+          - type: entities
+            title: Log Activity
+            show_header_toggle: false
+            entities:
+              - entity: input_select.intercourse_type
+                name: Who did what
+              - type: conditional
+                conditions:
+                  - entity: input_select.intercourse_type
+                    state_not: Together
+                  - entity: input_select.intercourse_type
+                    state_not: Not selected
+                row:
+                  entity: input_select.intercourse_subtype1
+                  name: How
+              - entity: input_select.intercourse_subtype2
+                name: Execution
+              - entity: input_select.intercourse_raw
+                name: Did you go RAW
+              - type: conditional
+                conditions:
+                  - entity: input_select.intercourse_raw
+                    state: 'Yes'
+                row:
+                  entity: input_select.intercourse_creampie
+                  name: Did you make a nice Creampie?
+              - type: conditional
+                conditions:
+                  - entity: input_select.intercourse_raw
+                    state: Partially
+                row:
+                  entity: input_select.intercourse_creampie
+                  name: Did you make a nice Creampie?
+          - type: button
+            entity: input_button.log_intercourse
+            name: Save Activity
+            icon: mdi:content-save-heart
       - type: entities
         title: Raw Data
         show_header_toggle: false

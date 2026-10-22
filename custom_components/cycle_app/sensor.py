@@ -19,6 +19,17 @@ _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data stored by Cycle App"
 
 
+def _record_content(record: dict[str, Any]) -> str:
+    """Convert a JSON record to the legacy parser representation."""
+    if record.get("content"):
+        return str(record["content"])
+    timestamp = record.get("timestamp")
+    cycle_day = record.get("cycle_day")
+    if timestamp and cycle_day is not None:
+        return f"{timestamp}|{cycle_day}"
+    return ""
+
+
 def _read_lines(path: str) -> list[str]:
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -31,13 +42,13 @@ def _read_lines(path: str) -> list[str]:
         for line in lines:
             try:
                 obj = json.loads(line)
-                parts.append(obj.get("content", ""))
+                parts.append(_record_content(obj))
             except Exception:
                 parts.append(line)
         return [p for p in parts if p]
     try:
         obj = json.loads(raw)
-        content = obj.get("content", raw)
+        content = _record_content(obj) or raw
         return [content] if content else []
     except Exception:
         if not raw:

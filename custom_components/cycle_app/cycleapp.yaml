@@ -17,6 +17,51 @@ input_button:
     name: Clear Intercourse History
     icon: mdi:delete
 
+input_select:
+  intercourse_type:
+    name: Intercourse Type
+    options:
+      - Not selected
+      - Together
+      - F2M
+      - M2F
+    initial: Not selected
+
+  intercourse_subtype1:
+    name: Intercourse How
+    options:
+      - Not selected
+      - Blowjob
+      - Handjob
+      - Creamfilljob
+      - Oystercleaning
+    initial: Not selected
+
+  intercourse_subtype2:
+    name: Intercourse Execution
+    options:
+      - Not selected
+      - Full
+      - Quick
+    initial: Not selected
+
+  intercourse_raw:
+    name: Intercourse RAW
+    options:
+      - Not selected
+      - Yes
+      - No
+      - Partially
+    initial: Not selected
+
+  intercourse_creampie:
+    name: Intercourse Creampie
+    options:
+      - Not selected
+      - Yes
+      - No
+    initial: Not selected
+
 
 
 input_number:
@@ -1118,29 +1163,64 @@ automation:
           entry: >
             {{ stamp }}|{{ cycle_day }}
 
-          current: >
-            {{ states('input_text.intercourse_history') }}
+          intercourse_type: >
+            {{ states('input_select.intercourse_type') }}
+
+          intercourse_subtype1: >
+            {{ states('input_select.intercourse_subtype1') }}
+
+          intercourse_subtype2: >
+            {{ states('input_select.intercourse_subtype2') }}
+
+          intercourse_raw: >
+            {{ states('input_select.intercourse_raw') }}
+
+          intercourse_creampie: >
+            {{ states('input_select.intercourse_creampie') }}
+
+          record: >
+            {{ {
+              'timestamp': stamp,
+              'cycle_day': cycle_day,
+              'intercourse_type': intercourse_type,
+              'intercourse_subtype1': '' if intercourse_type == 'Together' else intercourse_subtype1,
+              'intercourse_subtype2': intercourse_subtype2,
+              'intercourse_raw': intercourse_raw,
+              'intercourse_creampie': intercourse_creampie if intercourse_raw in ['Yes', 'Partially'] else ''
+            } | to_json }}
+
+      - condition: template
+        value_template: >
+          {{ intercourse_type != 'Not selected'
+             and intercourse_subtype2 != 'Not selected'
+             and intercourse_raw != 'Not selected'
+             and (intercourse_type == 'Together' or intercourse_subtype1 != 'Not selected')
+             and (intercourse_raw not in ['Yes', 'Partially'] or intercourse_creampie != 'Not selected') }}
 
       - service: input_text.set_value
         target:
           entity_id: input_text.intercourse_history
         data:
-
-          value: >
-
-            {% if current in ['unknown','unavailable',''] %}
-              {{ entry }}
-            {% else %}
-              {{ entry }}
-            {% endif %}
+          value: "{{ entry }}"
 
       # Also append the new entry to the persisted history file (NDJSON)
       - service: cycle_app.save_history
         data:
           filename: "data/ha_cycle_app/intercourse_history.json"
-          content: "{{ entry }}"
-          as_json: true
+          content: "{{ record }}"
+          as_json: false
           append: true
+
+      - service: input_select.select_option
+        target:
+          entity_id:
+            - input_select.intercourse_type
+            - input_select.intercourse_subtype1
+            - input_select.intercourse_subtype2
+            - input_select.intercourse_raw
+            - input_select.intercourse_creampie
+        data:
+          option: Not selected
 
 # ##############################################################################
 # Save period_start_history to external file whenever it changes (append-only)
