@@ -127,13 +127,13 @@ class BaseHistorySensor(SensorEntity):
 
 class IntercourseHistoryCount(BaseHistorySensor):
     @property
-    def state(self):
+    def native_value(self):
         return len(self.coordinator.data.get("points", []))
 
 
 class IntercourseTimeline(BaseHistorySensor):
     @property
-    def state(self):
+    def native_value(self):
         return len(self.coordinator.data.get("points", []))
 
     @property
@@ -143,10 +143,10 @@ class IntercourseTimeline(BaseHistorySensor):
 
 class LastIntercourseDate(BaseHistorySensor):
     @property
-    def state(self):
+    def native_value(self):
         pts = self.coordinator.data.get("points", [])
         if not pts:
-            return "none"
+            return None
         last = pts[-1]
         ts = int(last.get("x"))
         dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
@@ -155,7 +155,7 @@ class LastIntercourseDate(BaseHistorySensor):
 
 class IntercourseCountCurrentCycle(BaseHistorySensor):
     @property
-    def state(self):
+    def native_value(self):
         try:
             current_day = int(self.hass.states.get("sensor.cycle_day").state)
         except Exception:
@@ -186,29 +186,80 @@ class IntercourseCountCurrentCycle(BaseHistorySensor):
 
 class IntercourseCountFertileWindow(BaseHistorySensor):
     @property
-    def state(self):
-        try:
-            cycle_length = int(
-                self.hass.states.get("sensor.cycle_length_preferred").state
-            )
-        except Exception:
-            cycle_length = 28
-        try:
-            luteal_length = int(
-                self.hass.states.get("input_number.luteal_length").state
-            )
-        except Exception:
-            luteal_length = 14
+    def native_value(self):
+        start_state = self.hass.states.get("sensor.peak_fertility_start")
+        end_state = self.hass.states.get("sensor.peak_fertility_end")
+        if not start_state or not end_state:
+            return 0
 
-        ovulation_day = cycle_length - luteal_length
-        fertile_start = ovulation_day - 5
-        fertile_end = ovulation_day + 2
+        try:
+            peak_start = date.fromisoformat(start_state.state)
+            peak_end = date.fromisoformat(end_state.state)
+        except (TypeError, ValueError):
+            return 0
 
-        return sum(
-            1
-            for point in self.coordinator.data.get("points", [])
-            if fertile_start <= int(point.get("y", 0)) <= fertile_end
+        # A newly reported period starts a new cycle. Prefer the calculated
+        # sensor, then fall back to the raw period history if that sensor or
+        # an optional input_datetime is unavailable.
+        cycle_start = 0
+        cycle_entities = (
+            "sensor.last_period_start",
+            "input_datetime.last_period_start",
         )
+        for entity_id in cycle_entities:
+            cycle_state = self.hass.states.get(entity_id)
+            if not cycle_state or cycle_state.state in ("unknown", "unavailable", ""):
+                continue
+            try:
+                cycle_start = datetime.fromisoformat(cycle_state.state).replace(
+                    tzinfo=timezone.utc
+                ).timestamp() * 1000
+                break
+            except (TypeError, ValueError):
+                continue
+
+        if cycle_start == 0:
+            history = self.hass.states.get("input_text.period_start_history")
+            if history and history.state not in ("unknown", "unavailable", ""):
+                dates = []
+                for value in history.state.split(","):
+                    try:
+                        dates.append(date.fromisoformat(value.strip()))
+                    except ValueError:
+                        continue
+                if dates:
+                    cycle_start = datetime.combine(
+                        max(dates), datetime.min.time(), tzinfo=timezone.utc
+                    ).timestamp() * 1000
+
+        count = 0
+        for point in self.coordinator.data.get("points", []):
+            try:
+                timestamp = int(point.get("x", 0))
+                point_date = datetime.fromtimestamp(
+                    timestamp / 1000,
+                    tz=timezone.utc,
+                ).date()
+            except (TypeError, ValueError, OSError):
+                continue
+            if (
+                timestamp >= cycle_start
+                and peak_start <= point_date <= peak_end
+            ):
+                count += 1
+        return count
+
+
+class DaysSinceIntercourse(BaseHistorySensor):
+    _attr_native_unit_of_measurement = "d"
+
+    @property
+    def native_value(self):
+        points = self.coordinator.data.get("points", [])
+        if not points:
+            return None
+        last_timestamp = int(points[-1].get("x", 0)) / 1000
+        return int((datetime.now(timezone.utc).timestamp() - last_timestamp) / 86400)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
@@ -232,6 +283,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             coordinator,
             "Intercourse Count Fertile Window",
             "intercourse_count_fertile_window",
+        ),
+        DaysSinceIntercourse(
+            coordinator,
+            "Days Since Intercourse",
+            "days_since_intercourse",
         ),
     ]
 

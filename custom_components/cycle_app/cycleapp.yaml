@@ -879,19 +879,6 @@ template:
 
           {% endif %}
 
-      - name: Days Since Intercourse
-        unique_id: days_since_intercourse
-        unit_of_measurement: d
-
-        state: >
-          {% set d = states('sensor.last_intercourse_date') %}
-
-          {% if d not in ['unknown','unavailable','',none] %}
-            {{ ((as_timestamp(now()) - as_timestamp(d)) / 86400) | int }}
-          {% else %}
-            unknown
-          {% endif %}
-
 # ##############################################################################
 # SENSORS: Ovulation | Pregnancy predictor
 # ##############################################################################
@@ -1166,7 +1153,7 @@ automation:
       - service: cycle_app.save_history
         data:
           filename: "data/ha_cycle_app/period_start_history.json"
-          content: "{{ trigger.to_state.state }}"
+          content: "{{ trigger.to_state.state.split(',')[-1] | trim }}"
           as_json: true
           append: true
 
@@ -1187,7 +1174,7 @@ automation:
         data:
           filename: "data/ha_cycle_app/period_start_history.json"
           entity_id: input_text.period_start_history
-          limit: 100
+          limit: 21
 
 # AUTOMATION: PERIOD STARTED 
 # ##############################################################################

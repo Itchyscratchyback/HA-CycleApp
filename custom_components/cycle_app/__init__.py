@@ -99,6 +99,25 @@ def _read_lines(path):
         return [p for p in [s.strip() for s in raw.split(',')] if p]
 
 
+def _limit_history(lines, entity_id, limit):
+    """Normalize and limit history values before loading an input_text."""
+    if entity_id == "input_text.period_start_history":
+        values = []
+        for line in lines:
+            values.extend(value.strip() for value in line.split(","))
+        lines = list(dict.fromkeys(
+            value for value in values if len(value) == 10 and value[4] == "-" and value[7] == "-"
+        ))
+    try:
+        if limit is not None:
+            count = int(limit)
+            if count > 0:
+                lines = lines[-count:]
+    except (TypeError, ValueError):
+        _LOGGER.debug("load_history: invalid limit provided %s", limit)
+    return lines
+
+
 async def async_setup(hass, config):
     """Set up the cycle_app component.
 
@@ -147,13 +166,7 @@ async def async_setup(hass, config):
         if not lines:
             _LOGGER.warning("load_history: file not found or empty %s", path)
             return
-        try:
-            if limit is not None:
-                n = int(limit)
-                if n > 0:
-                    lines = lines[-n:]
-        except Exception:
-            _LOGGER.debug("load_history: invalid limit provided %s", limit)
+        lines = _limit_history(lines, entity_id, limit)
         content = ",".join(lines)
         await hass.services.async_call(
             "input_text",
@@ -211,14 +224,7 @@ async def async_setup_entry(hass, entry):
         if not lines:
             _LOGGER.warning("load_history: file not found or empty %s", path)
             return
-        # Apply optional limit (last N entries)
-        try:
-            if limit is not None:
-                n = int(limit)
-                if n > 0:
-                    lines = lines[-n:]
-        except Exception:
-            _LOGGER.debug("load_history: invalid limit provided %s", limit)
+        lines = _limit_history(lines, entity_id, limit)
 
         content = ",".join(lines)
         await hass.services.async_call(
