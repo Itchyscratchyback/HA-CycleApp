@@ -49,8 +49,8 @@ input_select:
     name: Intercourse RAW
     options:
       - Not selected
-      - Yes
-      - No
+      - "Yes"
+      - "No"
       - Partially
     initial: Not selected
 
@@ -58,8 +58,9 @@ input_select:
     name: Intercourse Creampie
     options:
       - Not selected
-      - Yes
-      - No
+      - "Yes"
+      - "No"
+      - "Partially"
     initial: Not selected
 
 
