@@ -1,0 +1,122 @@
+# Full dashboard (import via Raw configuration editor). Requires apexcharts-card.
+# Replace sensor.intercourse_timeline with your entity ID if it differs.
+# Colors: Together #ff6fa5 | F2M #63a4ff | M2F #ffd54f
+title: Activity
+views:
+  - title: Activity
+    path: activity
+    cards:
+      - type: custom:apexcharts-card
+        graph_span: 31d
+        span:
+          end: day
+        header:
+          show: true
+          title: Activity per day (31 days)
+        apex_config:
+          chart:
+            type: bar
+            stacked: true
+            height: 350
+          plotOptions:
+            bar:
+              columnWidth: '70%'
+          xaxis:
+            type: datetime
+            labels:
+              format: 'dd MMM'
+          yaxis:
+            min: 0
+            forceNiceScale: true
+            decimalsInFloat: 0
+          legend:
+            show: true
+          dataLabels:
+            enabled: true
+            offsetY: 8
+            style:
+              fontSize: '16px'
+            formatter: |
+              EVAL:function(val, o) {
+                const s = o.w.config.series[o.seriesIndex];
+                const pt = s.data[o.dataPointIndex];
+                const days = window.__cycleDays || {};
+                const key = new Date(pt[0]);
+                const k = key.getFullYear() + '-' + String(key.getMonth()+1).padStart(2,'0') + '-' + String(key.getDate()).padStart(2,'0');
+                const recs = ((days[k] || {})[s.name]) || [];
+                return recs.some(r => r.intercourse_creampie === 'Yes') ? '👑' : '';
+              }
+          tooltip:
+            custom: |
+              EVAL:function(o) {
+                const s = o.w.config.series[o.seriesIndex];
+                const pt = s.data[o.dataPointIndex];
+                const d = new Date(pt[0]);
+                const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                const recs = (((window.__cycleDays || {})[k]) || {})[s.name] || [];
+                const labels = {
+                  intercourse_type: 'Type', intercourse_subtype1: 'How',
+                  intercourse_subtype2: 'Execution', intercourse_raw: 'RAW',
+                  intercourse_creampie: 'Creampie', cycle_day: 'Cycle day'
+                };
+                let html = '<div style="padding:8px;font-size:12px"><b>' + k + ' - ' + s.name + ' (' + recs.length + ')</b>';
+                recs.forEach(r => {
+                  html += '<hr style="margin:4px 0">';
+                  html += '<b>' + (r.timestamp || '').slice(11, 16) + '</b>';
+                  Object.keys(labels).forEach(f => {
+                    if (r[f] !== undefined && r[f] !== '' && r[f] !== 'Not selected') {
+                      html += '<br>' + labels[f] + ': ' + r[f] + (f === 'intercourse_creampie' && r[f] === 'Yes' ? ' 👑' : '');
+                    }
+                  });
+                });
+                return html + '</div>';
+              }
+        series:
+          - entity: sensor.intercourse_timeline
+            name: Together
+            color: '#ff6fa5'
+            type: column
+            data_generator: |
+              const all = {};
+              (entity.attributes.records || []).forEach(r => {
+                const k = (r.timestamp || '').slice(0, 10);
+                const t = r.intercourse_type;
+                if (!k || !t) return;
+                all[k] = all[k] || {};
+                (all[k][t] = all[k][t] || []).push(r);
+              });
+              window.__cycleDays = all;
+              return Object.keys(all).filter(k => all[k]['Together'])
+                .map(k => [new Date(k + 'T00:00:00').getTime(), all[k]['Together'].length]);
+          - entity: sensor.intercourse_timeline
+            name: F2M
+            color: '#63a4ff'
+            type: column
+            data_generator: |
+              const all = {};
+              (entity.attributes.records || []).forEach(r => {
+                const k = (r.timestamp || '').slice(0, 10);
+                const t = r.intercourse_type;
+                if (!k || !t) return;
+                all[k] = all[k] || {};
+                (all[k][t] = all[k][t] || []).push(r);
+              });
+              window.__cycleDays = all;
+              return Object.keys(all).filter(k => all[k]['F2M'])
+                .map(k => [new Date(k + 'T00:00:00').getTime(), all[k]['F2M'].length]);
+          - entity: sensor.intercourse_timeline
+            name: M2F
+            color: '#ffd54f'
+            type: column
+            data_generator: |
+              const all = {};
+              (entity.attributes.records || []).forEach(r => {
+                const k = (r.timestamp || '').slice(0, 10);
+                const t = r.intercourse_type;
+                if (!k || !t) return;
+                all[k] = all[k] || {};
+                (all[k][t] = all[k][t] || []).push(r);
+              });
+              window.__cycleDays = all;
+              return Object.keys(all).filter(k => all[k]['M2F'])
+                .map(k => [new Date(k + 'T00:00:00').getTime(), all[k]['M2F'].length]);
