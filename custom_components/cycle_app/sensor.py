@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, NOT_SELECTED
 from .engine import CycleStats
 from .entity import CycleEntity
 from .manager import CycleManager
@@ -98,13 +98,22 @@ class IntercourseHistoryCount(CycleEntity, SensorEntity):
 
 
 class IntercourseTimeline(CycleEntity, SensorEntity):
+    # Large attributes are kept out of the recorder database.
+    _unrecorded_attributes = frozenset({"series", "records"})
+
     @property
     def native_value(self) -> int:
         return len(self.manager.points)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"series": self.manager.points}
+        return {
+            "series": self.manager.points,
+            "records": [
+                {k: v for k, v in r.items() if v not in ("", None, NOT_SELECTED)}
+                for r in self.manager.intercourse
+            ],
+        }
 
 
 class LastIntercourseDate(CycleEntity, SensorEntity):
