@@ -1,11 +1,13 @@
 {
   "domain": "cycle_app",
-  "name": "Cycle App Helper",
-  "version": "0.1.0",
-  "documentation": "",
-  "requirements": [],
-  "dependencies": [],
-  "codeowners": [],
+  "name": "Cycle App",
+  "version": "0.2.0",
+  "documentation": "https://github.com/Itchyscratchyback/HA-CycleApp",
+  "issue_tracker": "https://github.com/Itchyscratchyback/HA-CycleApp/issues",
+  "codeowners": ["@Itchyscratchyback"],
   "config_flow": true,
-  "platforms": ["sensor"]
+  "dependencies": [],
+  "requirements": [],
+  "iot_class": "calculated",
+  "integration_type": "service"
 }

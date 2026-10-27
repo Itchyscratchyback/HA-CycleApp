@@ -1,7 +1,5 @@
 {
   "name": "Cycle App",
-  "content_in_root": false,
-  "domains": ["integration"],
-  "homeassistant": "2021.12.0",
+  "homeassistant": "2024.1.0",
   "render_readme": true
 }

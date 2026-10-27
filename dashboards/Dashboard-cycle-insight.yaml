@@ -42,7 +42,7 @@ views:
                       const toF   = (v,d=0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
 
                       const total  = Math.max(15, Math.min(60, Math.round(toF(get('sensor.cycle_length_preferred'), 28))));
-                      const luteal = Math.max(10, Math.min(17, Math.round(toF(get('input_number.luteal_length'), 14))));
+                      const luteal = Math.max(10, Math.min(17, Math.round(toF(get('number.luteal_length'), 14))));
                       const day    = Math.max(1, Math.min(total, toInt(get('sensor.cycle_day'), 1)));
 
                       const ovuD      = Math.max(1, Math.min(total, Math.round(total - luteal)));
@@ -249,14 +249,14 @@ views:
                   action: more-info
                 hold_action:
                   action: perform-action
-                  perform_action: input_button.press
+                  perform_action: button.press
                   confirmation:
                     text: Weet je het zeker?
                   target:
-                    entity_id: input_button.period_started
+                    entity_id: button.period_started
                   data: {}
                 name: Period Started
-                entity: input_button.period_started
+                entity: button.period_started
               - show_name: true
                 show_icon: true
                 type: button
@@ -281,7 +281,7 @@ views:
                 tap_action:
                   action: more-info
                 name: ' '
-                entity: input_button.log_intercourse
+                entity: button.log_intercourse
             columns: 3
           - type: custom:bubble-card
             card_type: button

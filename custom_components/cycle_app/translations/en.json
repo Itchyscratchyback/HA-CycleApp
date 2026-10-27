@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cycle App",
+        "description": "Set up Cycle App. All helpers, sensors and buttons are created automatically."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Cycle App is already set up."
+    }
+  }
+}

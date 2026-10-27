@@ -1,305 +1,175 @@
+"""Sensors for Cycle App."""
 from __future__ import annotations
 
-from datetime import datetime, date, timezone
-import json
-import logging
-from typing import Any
+from dataclasses import dataclass
+from datetime import date, datetime, time, timezone
+from typing import Any, Callable
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ATTRIBUTION
+from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
+
 from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
-ATTRIBUTION = "Data stored by Cycle App"
-
-
-def _record_content(record: dict[str, Any]) -> str:
-    """Convert a JSON record to the legacy parser representation."""
-    if record.get("content"):
-        return str(record["content"])
-    timestamp = record.get("timestamp")
-    cycle_day = record.get("cycle_day")
-    if timestamp and cycle_day is not None:
-        return f"{timestamp}|{cycle_day}"
-    return ""
+from .engine import CycleStats
+from .entity import CycleEntity
+from .manager import CycleManager
 
 
-def _read_lines(path: str) -> list[str]:
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            raw = f.read()
-    except FileNotFoundError:
-        return []
-    lines = [l.strip() for l in raw.splitlines() if l.strip()]
-    if len(lines) > 1:
-        parts: list[str] = []
-        for line in lines:
-            try:
-                obj = json.loads(line)
-                parts.append(_record_content(obj))
-            except Exception:
-                parts.append(line)
-        return [p for p in parts if p]
-    try:
-        obj = json.loads(raw)
-        content = _record_content(obj) or raw
-        return [content] if content else []
-    except Exception:
-        if not raw:
-            return []
-        return [p for p in [s.strip() for s in raw.split(',')] if p]
+@dataclass(frozen=True)
+class StatSpec:
+    name: str
+    unique_id: str
+    value: Callable[[CycleStats], Any]
+    unit: str | None = None
+    is_date: bool = False
 
 
-def _parse_entry(content: str) -> tuple[int, int] | None:
-    # returns (epoch_ms, value)
-    s = content.strip()
-    if not s:
-        return None
-    if "|" in s:
-        parts = s.split("|", 1)
-        ts = parts[0].strip()
-        val_str = parts[1].strip()
-        try:
-            val = int(val_str)
-        except Exception:
-            try:
-                val = int(float(val_str))
-            except Exception:
-                val = 1
-    else:
-        ts = s
-        val = 1
-    # parse ts as datetime or date
-    dt = None
-    try:
-        # try full ISO parse
-        dt = datetime.fromisoformat(ts)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        try:
-            # try date only YYYY-MM-DD
-            d = date.fromisoformat(ts)
-            dt = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
-        except Exception:
+def _lengths(s: CycleStats) -> str:
+    return ",".join(str(v) for v in s.cycle_lengths)
+
+
+STAT_SENSORS: tuple[StatSpec, ...] = (
+    StatSpec("Period Dates Count", "period_dates_count", lambda s: s.period_dates_count),
+    StatSpec("Cycle Count", "cycle_count", lambda s: s.cycle_count),
+    StatSpec("Last Period Start", "last_period_start", lambda s: s.last_period_start, is_date=True),
+    StatSpec("Previous Period Start", "previous_period_start", lambda s: s.previous_period_start, is_date=True),
+    StatSpec("Cycle Lengths Calculated", "cycle_lengths_calculated", _lengths),
+    StatSpec("Last Cycle Length Robust", "last_cycle_length_robust", lambda s: s.last_cycle_length, "d"),
+    StatSpec("Shortest Cycle Length", "shortest_cycle_length", lambda s: s.shortest_cycle_length, "d"),
+    StatSpec("Longest Cycle Length", "longest_cycle_length", lambda s: s.longest_cycle_length, "d"),
+    StatSpec("Cycle Length Median", "cycle_length_median", lambda s: s.median, "d"),
+    StatSpec("Cycle Sample Size", "cycle_sample_size", lambda s: s.sample_size),
+    StatSpec("Cycle Outlier Count", "cycle_outlier_count", lambda s: s.outlier_count),
+    StatSpec("Cycle Length Mean Robust", "cycle_length_mean_robust", lambda s: s.mean_robust, "d"),
+    StatSpec("Cycle Length StdDev Robust", "cycle_length_stddev_robust", lambda s: s.stddev, "d"),
+    StatSpec("Cycle Data Quality", "cycle_data_quality", lambda s: s.quality),
+    StatSpec("Cycle Prediction Confidence", "cycle_prediction_confidence", lambda s: s.confidence),
+    StatSpec("Cycle Length Preferred", "cycle_length_preferred", lambda s: s.preferred_length, "d"),
+    StatSpec("Cycle Day", "cycle_day", lambda s: s.cycle_day, "d"),
+    StatSpec("Predicted Next Period Date", "predicted_next_period_date", lambda s: s.next_period, is_date=True),
+    StatSpec("Days To Next Period", "days_to_next_period", lambda s: s.days_to_next_period, "d"),
+    StatSpec("Predicted Ovulation Date", "predicted_ovulation_date", lambda s: s.ovulation, is_date=True),
+    StatSpec("Days To Ovulation", "days_to_ovulation", lambda s: s.days_to_ovulation, "d"),
+    StatSpec("Fertility Score", "fertility_score", lambda s: s.fertility_score, "/10"),
+    StatSpec("Fertility Status", "fertility_status", lambda s: s.fertility_status),
+    StatSpec("Predicted Next Ovulation Date", "predicted_next_ovulation_date", lambda s: s.next_ovulation, is_date=True),
+    StatSpec("Earliest Expected Period", "earliest_expected_period", lambda s: s.earliest_period, is_date=True),
+    StatSpec("Latest Expected Period", "latest_expected_period", lambda s: s.latest_period, is_date=True),
+    StatSpec("Predicted Following Period Date", "predicted_following_period_date", lambda s: s.following_period, is_date=True),
+    StatSpec("Days To Next Ovulation Date", "days_to_next_ovulation_date", lambda s: s.days_to_next_ovulation, "d"),
+    StatSpec("Pre Period Date", "pre_period_date", lambda s: s.pre_period, is_date=True),
+    StatSpec("Days To Pre Period", "days_to_pre_period", lambda s: s.days_to_pre_period, "d"),
+    StatSpec("Cycle Phase Color", "cycle_phase_color", lambda s: s.phase_color),
+    StatSpec("Cycle Phase", "cycle_phase", lambda s: s.phase),
+    StatSpec("Earliest Ovulation Date", "earliest_ovulation_date", lambda s: s.earliest_ovulation, is_date=True),
+    StatSpec("Latest Ovulation Date", "latest_ovulation_date", lambda s: s.latest_ovulation, is_date=True),
+    StatSpec("Fertility Window Start", "fertility_window_start", lambda s: s.window_start, is_date=True),
+    StatSpec("Fertility Window End", "fertility_window_end", lambda s: s.window_end, is_date=True),
+    StatSpec("Peak Fertility Start", "peak_fertility_start", lambda s: s.peak_start, is_date=True),
+    StatSpec("Peak Fertility End", "peak_fertility_end", lambda s: s.peak_end, is_date=True),
+    StatSpec("Fertility Window Status", "fertility_window_status", lambda s: s.window_status),
+)
+
+
+class CycleStatSensor(CycleEntity, SensorEntity):
+    def __init__(self, manager: CycleManager, entry: ConfigEntry, spec: StatSpec) -> None:
+        super().__init__(manager, entry, spec.name, spec.unique_id)
+        self._spec = spec
+        self._attr_native_unit_of_measurement = spec.unit
+        if spec.is_date:
+            self._attr_device_class = SensorDeviceClass.DATE
+
+    @property
+    def native_value(self) -> Any:
+        return self._spec.value(self.manager.stats)
+
+
+class IntercourseTimelineRaw(CycleEntity, SensorEntity):
+    @property
+    def native_value(self) -> str:
+        return self.manager.last_intercourse_text
+
+
+class IntercourseHistoryCount(CycleEntity, SensorEntity):
+    @property
+    def native_value(self) -> int:
+        return len(self.manager.points)
+
+
+class IntercourseTimeline(CycleEntity, SensorEntity):
+    @property
+    def native_value(self) -> int:
+        return len(self.manager.points)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"series": self.manager.points}
+
+
+class LastIntercourseDate(CycleEntity, SensorEntity):
+    @property
+    def native_value(self) -> str | None:
+        points = self.manager.points
+        if not points:
             return None
-    epoch_ms = int(dt.timestamp() * 1000)
-    return (epoch_ms, val)
+        return datetime.fromtimestamp(points[-1]["x"] / 1000, tz=timezone.utc).isoformat()
 
 
-class HistoryCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, path: str) -> None:
-        super().__init__(hass, _LOGGER, name="cycle_app_history", update_interval=None)
-        self.path = path
-        # store parsed points
-        self.data: dict[str, Any] = {"points": []}
-
-    async def _async_update_data(self) -> dict[str, Any]:
-        # read file and parse entries
-        try:
-            lines = await self.hass.async_add_executor_job(_read_lines, self.path)
-            pts = []
-            for l in lines:
-                parsed = _parse_entry(l)
-                if parsed:
-                    pts.append({"x": parsed[0], "y": parsed[1]})
-            pts.sort(key=lambda p: p["x"]) if pts else None
-            return {"points": pts}
-        except Exception as err:
-            raise UpdateFailed(err)
+def _day_start_ms(day: date) -> float:
+    return datetime.combine(day, time.min, tzinfo=timezone.utc).timestamp() * 1000
 
 
-class BaseHistorySensor(SensorEntity):
-    _attr_attribution = ATTR_ATTRIBUTION
-
-    def __init__(self, coordinator: HistoryCoordinator, name: str, unique_id: str):
-        self.coordinator = coordinator
-        self._attr_name = name
-        self._attr_unique_id = unique_id
-
+class IntercourseCountCurrentCycle(CycleEntity, SensorEntity):
     @property
-    def available(self) -> bool:
-        return bool(self.coordinator.data and self.coordinator.data.get("points") is not None)
-
-    async def async_added_to_hass(self) -> None:
-        self.async_on_remove(self.coordinator.async_add_listener(self._handle_coordinator_update))
-        # request initial refresh
-        await self.coordinator.async_request_refresh()
-
-    def _handle_coordinator_update(self) -> None:
-        self.async_write_ha_state()
-
-
-class IntercourseHistoryCount(BaseHistorySensor):
-    @property
-    def native_value(self):
-        return len(self.coordinator.data.get("points", []))
-
-
-class IntercourseTimeline(BaseHistorySensor):
-    @property
-    def native_value(self):
-        return len(self.coordinator.data.get("points", []))
-
-    @property
-    def extra_state_attributes(self):
-        return {"series": self.coordinator.data.get("points", []), "attribution": ATTRIBUTION}
-
-
-class LastIntercourseDate(BaseHistorySensor):
-    @property
-    def native_value(self):
-        pts = self.coordinator.data.get("points", [])
-        if not pts:
-            return None
-        last = pts[-1]
-        ts = int(last.get("x"))
-        dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
-        return dt.isoformat()
-
-
-class IntercourseCountCurrentCycle(BaseHistorySensor):
-    @property
-    def native_value(self):
-        try:
-            current_day = int(self.hass.states.get("sensor.cycle_day").state)
-        except Exception:
-            current_day = 0
-
-        try:
-            last_period = self.hass.states.get("sensor.last_period_start").state
-            cycle_start = int(datetime.fromisoformat(last_period).replace(
-                tzinfo=timezone.utc
-            ).timestamp() * 1000)
-        except Exception:
-            cycle_start = 0
-
-        count = 0
-        for point in self.coordinator.data.get("points", []):
-            try:
-                day = int(point.get("y", 0))
-            except Exception:
-                day = 0
-            if (
-                day > 0
-                and day <= current_day
-                and int(point.get("x", 0)) >= cycle_start
-            ):
-                count += 1
-        return count
-
-
-class IntercourseCountFertileWindow(BaseHistorySensor):
-    @property
-    def native_value(self):
-        start_state = self.hass.states.get("sensor.peak_fertility_start")
-        end_state = self.hass.states.get("sensor.peak_fertility_end")
-        if not start_state or not end_state:
-            return 0
-
-        try:
-            peak_start = date.fromisoformat(start_state.state)
-            peak_end = date.fromisoformat(end_state.state)
-        except (TypeError, ValueError):
-            return 0
-
-        # A newly reported period starts a new cycle. Prefer the calculated
-        # sensor, then fall back to the raw period history if that sensor or
-        # an optional input_datetime is unavailable.
-        cycle_start = 0
-        cycle_entities = (
-            "sensor.last_period_start",
-            "input_datetime.last_period_start",
+    def native_value(self) -> int:
+        stats = self.manager.stats
+        start = _day_start_ms(stats.last_period_start) if stats.last_period_start else 0
+        return sum(
+            1
+            for p in self.manager.points
+            if 0 < p["y"] <= stats.cycle_day and p["x"] >= start
         )
-        for entity_id in cycle_entities:
-            cycle_state = self.hass.states.get(entity_id)
-            if not cycle_state or cycle_state.state in ("unknown", "unavailable", ""):
-                continue
-            try:
-                cycle_start = datetime.fromisoformat(cycle_state.state).replace(
-                    tzinfo=timezone.utc
-                ).timestamp() * 1000
-                break
-            except (TypeError, ValueError):
-                continue
 
-        if cycle_start == 0:
-            history = self.hass.states.get("input_text.period_start_history")
-            if history and history.state not in ("unknown", "unavailable", ""):
-                dates = []
-                for value in history.state.split(","):
-                    try:
-                        dates.append(date.fromisoformat(value.strip()))
-                    except ValueError:
-                        continue
-                if dates:
-                    cycle_start = datetime.combine(
-                        max(dates), datetime.min.time(), tzinfo=timezone.utc
-                    ).timestamp() * 1000
 
+class IntercourseCountFertileWindow(CycleEntity, SensorEntity):
+    @property
+    def native_value(self) -> int:
+        stats = self.manager.stats
+        if not stats.peak_start or not stats.peak_end:
+            return 0
+        start = _day_start_ms(stats.last_period_start) if stats.last_period_start else 0
         count = 0
-        for point in self.coordinator.data.get("points", []):
-            try:
-                timestamp = int(point.get("x", 0))
-                point_date = datetime.fromtimestamp(
-                    timestamp / 1000,
-                    tz=timezone.utc,
-                ).date()
-            except (TypeError, ValueError, OSError):
-                continue
-            if (
-                timestamp >= cycle_start
-                and peak_start <= point_date <= peak_end
-            ):
+        for p in self.manager.points:
+            day = datetime.fromtimestamp(p["x"] / 1000, tz=timezone.utc).date()
+            if p["x"] >= start and stats.peak_start <= day <= stats.peak_end:
                 count += 1
         return count
 
 
-class DaysSinceIntercourse(BaseHistorySensor):
+class DaysSinceIntercourse(CycleEntity, SensorEntity):
     _attr_native_unit_of_measurement = "d"
 
     @property
-    def native_value(self):
-        points = self.coordinator.data.get("points", [])
+    def native_value(self) -> int | None:
+        points = self.manager.points
         if not points:
             return None
-        last_timestamp = int(points[-1].get("x", 0)) / 1000
-        return int((datetime.now(timezone.utc).timestamp() - last_timestamp) / 86400)
+        return int((dt_util.utcnow().timestamp() - points[-1]["x"] / 1000) / 86400)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
-    path = hass.config.path("data/ha_cycle_app/intercourse_history.json")
-    coordinator = HistoryCoordinator(hass, path)
-    # perform initial refresh
-    await coordinator.async_request_refresh()
-
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-
-    entities = [
-        IntercourseHistoryCount(coordinator, "Intercourse History Count", f"{DOMAIN}_history_count"),
-        IntercourseTimeline(coordinator, "Intercourse Timeline", f"{DOMAIN}_timeline"),
-        LastIntercourseDate(coordinator, "Last Intercourse Date", "last_intercourse_date"),
-        IntercourseCountCurrentCycle(
-            coordinator,
-            "Intercourse Count Current Cycle",
-            "intercourse_count_current_cycle",
-        ),
-        IntercourseCountFertileWindow(
-            coordinator,
-            "Intercourse Count Fertile Window",
-            "intercourse_count_fertile_window",
-        ),
-        DaysSinceIntercourse(
-            coordinator,
-            "Days Since Intercourse",
-            "days_since_intercourse",
-        ),
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
+    manager: CycleManager = hass.data[DOMAIN][entry.entry_id]
+    entities: list[CycleEntity] = [
+        CycleStatSensor(manager, entry, spec) for spec in STAT_SENSORS
     ]
-
-    async_add_entities(entities, update_before_add=False)
+    entities += [
+        IntercourseTimelineRaw(manager, entry, "Intercourse Timeline Raw", "intercourse_timeline_raw"),
+        IntercourseHistoryCount(manager, entry, "Intercourse History Count", f"{DOMAIN}_history_count"),
+        IntercourseTimeline(manager, entry, "Intercourse Timeline", f"{DOMAIN}_timeline"),
+        LastIntercourseDate(manager, entry, "Last Intercourse Date", "last_intercourse_date"),
+        IntercourseCountCurrentCycle(manager, entry, "Intercourse Count Current Cycle", "intercourse_count_current_cycle"),
+        IntercourseCountFertileWindow(manager, entry, "Intercourse Count Fertile Window", "intercourse_count_fertile_window"),
+        DaysSinceIntercourse(manager, entry, "Days Since Intercourse", "days_since_intercourse"),
+    ]
+    async_add_entities(entities)

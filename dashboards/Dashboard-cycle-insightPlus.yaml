@@ -273,7 +273,7 @@ views:
                 fillColor: '#6ecb63'
                 opacity: 0.1
         series:
-          - entity: input_text.intercourse_history
+          - entity: text.intercourse_history
             name: Activity Count
             color: '#ff6fa5'
             type: column
@@ -339,7 +339,7 @@ views:
       - type: horizontal-stack
         cards:
           - type: button
-            entity: input_button.period_started
+            entity: button.period_started
             name: Period Started
             icon: mdi:calendar-plus
           - type: custom:bubble-card
@@ -351,7 +351,7 @@ views:
               action: navigate
               navigation_path: '#log_activity'
           - type: button
-            entity: input_button.clear_intercourse_history
+            entity: button.clear_intercourse_history
             name: Clear Activity
             icon: mdi:delete
       - type: custom:bubble-card
@@ -364,45 +364,45 @@ views:
             title: Log Activity
             show_header_toggle: false
             entities:
-              - entity: input_select.intercourse_type
+              - entity: select.intercourse_type
                 name: Who did what
               - type: conditional
                 conditions:
-                  - entity: input_select.intercourse_type
+                  - entity: select.intercourse_type
                     state_not: Together
-                  - entity: input_select.intercourse_type
+                  - entity: select.intercourse_type
                     state_not: Not selected
                 row:
-                  entity: input_select.intercourse_subtype1
+                  entity: select.intercourse_subtype1
                   name: How
-              - entity: input_select.intercourse_subtype2
+              - entity: select.intercourse_subtype2
                 name: Execution
-              - entity: input_select.intercourse_raw
+              - entity: select.intercourse_raw
                 name: Did you go RAW
               - type: conditional
                 conditions:
-                  - entity: input_select.intercourse_raw
+                  - entity: select.intercourse_raw
                     state: 'Yes'
                 row:
-                  entity: input_select.intercourse_creampie
+                  entity: select.intercourse_creampie
                   name: Did you make a nice Creampie?
               - type: conditional
                 conditions:
-                  - entity: input_select.intercourse_raw
+                  - entity: select.intercourse_raw
                     state: Partially
                 row:
-                  entity: input_select.intercourse_creampie
+                  entity: select.intercourse_creampie
                   name: Did you make a nice Creampie?
           - type: button
-            entity: input_button.log_intercourse
+            entity: button.log_intercourse
             name: Save Activity
             icon: mdi:content-save-heart
       - type: entities
         title: Raw Data
         show_header_toggle: false
         entities:
-          - entity: input_text.period_start_history
-          - entity: input_text.intercourse_history
+          - entity: text.period_start_history
+          - entity: text.intercourse_history
           - entity: sensor.cycle_lengths_calculated
       - type: entities
         title: Diagnostics
@@ -457,8 +457,8 @@ views:
         title: Raw Data
         show_header_toggle: false
         entities:
-          - entity: input_text.period_start_history
-          - entity: input_text.intercourse_history
+          - entity: text.period_start_history
+          - entity: text.intercourse_history
           - entity: sensor.cycle_lengths_calculated
       - type: markdown
         title: Future Cycle Forecast
