@@ -25,10 +25,6 @@ views:
             type: datetime
             labels:
               format: 'dd MMM'
-          yaxis:
-            min: 0
-            forceNiceScale: true
-            decimalsInFloat: 0
           legend:
             show: true
           dataLabels:
@@ -71,11 +67,20 @@ views:
                 });
                 return html + '</div>';
               }
+        yaxis:
+          - min: 0
+            decimals: 0
+            apex_config:
+              forceNiceScale: true
+              tickAmount: 4
         series:
           - entity: sensor.intercourse_timeline
             name: Together
             color: '#ff6fa5'
             type: column
+            show:
+              datalabels: true
+              legend_value: false
             data_generator: |
               const all = {};
               (entity.attributes.records || []).forEach(r => {
@@ -92,6 +97,9 @@ views:
             name: F2M
             color: '#63a4ff'
             type: column
+            show:
+              datalabels: true
+              legend_value: false
             data_generator: |
               const all = {};
               (entity.attributes.records || []).forEach(r => {
@@ -108,6 +116,9 @@ views:
             name: M2F
             color: '#ffd54f'
             type: column
+            show:
+              datalabels: true
+              legend_value: false
             data_generator: |
               const all = {};
               (entity.attributes.records || []).forEach(r => {

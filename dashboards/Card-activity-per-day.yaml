@@ -20,10 +20,6 @@ apex_config:
     type: datetime
     labels:
       format: 'dd MMM'
-  yaxis:
-    min: 0
-    forceNiceScale: true
-    decimalsInFloat: 0
   legend:
     show: true
   dataLabels:
@@ -66,11 +62,20 @@ apex_config:
         });
         return html + '</div>';
       }
+yaxis:
+  - min: 0
+    decimals: 0
+    apex_config:
+      forceNiceScale: true
+      tickAmount: 4
 series:
   - entity: sensor.intercourse_timeline
     name: Together
     color: '#ff6fa5'
     type: column
+    show:
+      datalabels: true
+      legend_value: false
     data_generator: |
       const recs = entity.attributes.records || [];
       const all = {};
@@ -88,6 +93,9 @@ series:
     name: F2M
     color: '#63a4ff'
     type: column
+    show:
+      datalabels: true
+      legend_value: false
     data_generator: |
       const all = window.__cycleDays || {};
       return Object.keys(all).filter(k => all[k]['F2M'])
@@ -96,6 +104,9 @@ series:
     name: M2F
     color: '#ffd54f'
     type: column
+    show:
+      datalabels: true
+      legend_value: false
     data_generator: |
       const all = window.__cycleDays || {};
       return Object.keys(all).filter(k => all[k]['M2F'])
