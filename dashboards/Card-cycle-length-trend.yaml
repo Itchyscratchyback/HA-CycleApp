@@ -62,8 +62,9 @@ series:
     show:
       datalabels: true
     data_generator: |
+      const H = (typeof hass !== 'undefined' && hass) || document.querySelector('home-assistant').hass;
       const lens = (entity.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
-      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      const last = H.states['sensor.cycle_app_last_period_start']?.state;
       if (!lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
       const [y, m, d] = last.split('-').map(Number);
       const out = [];
@@ -77,9 +78,10 @@ series:
     name: Mean
     color: '#63a4ff'
     data_generator: |
+      const H = (typeof hass !== 'undefined' && hass) || document.querySelector('home-assistant').hass;
       const mean = parseFloat(entity.state);
-      const lens = (hass.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
-      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      const lens = (H.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
+      const last = H.states['sensor.cycle_app_last_period_start']?.state;
       if (isNaN(mean) || !lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
       const [y, m, d] = last.split('-').map(Number);
       const endD = new Date(y, m - 1, d);
@@ -90,10 +92,11 @@ series:
     color: '#9ca3af'
     stroke_width: 1
     data_generator: |
+      const H = (typeof hass !== 'undefined' && hass) || document.querySelector('home-assistant').hass;
       const sd = parseFloat(entity.state);
-      const mean = parseFloat(hass.states['sensor.cycle_app_cycle_length_mean_robust']?.state);
-      const lens = (hass.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
-      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      const mean = parseFloat(H.states['sensor.cycle_app_cycle_length_mean_robust']?.state);
+      const lens = (H.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
+      const last = H.states['sensor.cycle_app_last_period_start']?.state;
       if (isNaN(sd) || isNaN(mean) || !lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
       const [y, m, d] = last.split('-').map(Number);
       const endD = new Date(y, m - 1, d);
@@ -104,10 +107,11 @@ series:
     color: '#9ca3af'
     stroke_width: 1
     data_generator: |
+      const H = (typeof hass !== 'undefined' && hass) || document.querySelector('home-assistant').hass;
       const sd = parseFloat(entity.state);
-      const mean = parseFloat(hass.states['sensor.cycle_app_cycle_length_mean_robust']?.state);
-      const lens = (hass.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
-      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      const mean = parseFloat(H.states['sensor.cycle_app_cycle_length_mean_robust']?.state);
+      const lens = (H.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
+      const last = H.states['sensor.cycle_app_last_period_start']?.state;
       if (isNaN(sd) || isNaN(mean) || !lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
       const [y, m, d] = last.split('-').map(Number);
       const endD = new Date(y, m - 1, d);
