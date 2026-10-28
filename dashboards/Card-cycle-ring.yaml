@@ -115,7 +115,7 @@ custom_fields:
         // Day ticks and labels
         let ticks = '';
         for (let d = 1; d <= total; d++) {
-          const a = ang(d) + (360 / total) / 2;
+          const a = ang(d);
           const major = d === 1 || d % 7 === 0;
           const [x1, y1] = pt(a, r + w / 2 + 3);
           const [x2, y2] = pt(a, r + w / 2 + (major ? 9 : 6));
