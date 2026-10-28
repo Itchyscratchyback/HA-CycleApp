@@ -1,0 +1,115 @@
+# Requires apexcharts-card (HACS). Add via Edit > Add card > Manual.
+# Entity IDs assume the "cycle_app_" prefix; adjust if yours differ.
+# Shows the last 12 cycle lengths (each dot is dated at the period start that
+# ended the cycle), the robust mean (dashed) and +/- 1 standard deviation (dotted).
+# The Y axis is zoomed to the data range so small fluctuations stay visible.
+type: custom:apexcharts-card
+graph_span: 365d
+span:
+  end: day
+header:
+  show: true
+  title: Cycle length trend
+  show_states: true
+  colorize_states: true
+all_series_config:
+  type: line
+  stroke_width: 2
+  show:
+    legend_value: false
+    in_header: false
+yaxis:
+  - decimals: 0
+    apex_config:
+      forceNiceScale: false
+      tickAmount: 6
+      min: |
+        EVAL:function(min) { return Math.floor(min) - 1; }
+      max: |
+        EVAL:function(max) { return Math.ceil(max) + 1; }
+      title:
+        text: days
+apex_config:
+  chart:
+    height: 260
+  grid:
+    show: true
+    borderColor: '#3a2f46'
+  xaxis:
+    type: datetime
+    labels:
+      datetimeUTC: false
+      format: 'dd MMM'
+  stroke:
+    curve: straight
+    dashArray: [0, 6, 2, 2]
+  markers:
+    size: [5, 0, 0, 0]
+    strokeWidth: 2
+  legend:
+    show: true
+  tooltip:
+    shared: true
+    x:
+      format: 'dd MMM yyyy'
+    y:
+      formatter: |
+        EVAL:function(v) { return v == null ? '' : v + ' d'; }
+series:
+  - entity: sensor.cycle_app_cycle_lengths_calculated
+    name: Cycle length
+    color: '#ff6fa5'
+    show:
+      datalabels: true
+    data_generator: |
+      const lens = (entity.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
+      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      if (!lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
+      const [y, m, d] = last.split('-').map(Number);
+      const out = [];
+      let end = new Date(y, m - 1, d);
+      for (let i = lens.length - 1; i >= 0; i--) {
+        out.unshift([end.getTime(), lens[i]]);
+        end = new Date(end.getFullYear(), end.getMonth(), end.getDate() - lens[i]);
+      }
+      return out;
+  - entity: sensor.cycle_app_cycle_length_mean_robust
+    name: Mean
+    color: '#63a4ff'
+    data_generator: |
+      const mean = parseFloat(entity.state);
+      const lens = (hass.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
+      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      if (isNaN(mean) || !lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
+      const [y, m, d] = last.split('-').map(Number);
+      const endD = new Date(y, m - 1, d);
+      const startD = new Date(y, m - 1, d - lens.reduce((a, b) => a + b, 0));
+      return [[startD.getTime(), mean], [endD.getTime(), mean]];
+  - entity: sensor.cycle_app_cycle_length_stddev_robust
+    name: +1 SD
+    color: '#9ca3af'
+    stroke_width: 1
+    data_generator: |
+      const sd = parseFloat(entity.state);
+      const mean = parseFloat(hass.states['sensor.cycle_app_cycle_length_mean_robust']?.state);
+      const lens = (hass.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
+      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      if (isNaN(sd) || isNaN(mean) || !lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
+      const [y, m, d] = last.split('-').map(Number);
+      const endD = new Date(y, m - 1, d);
+      const startD = new Date(y, m - 1, d - lens.reduce((a, b) => a + b, 0));
+      return [[startD.getTime(), mean + sd], [endD.getTime(), mean + sd]];
+  - entity: sensor.cycle_app_cycle_length_stddev_robust
+    name: -1 SD
+    color: '#9ca3af'
+    stroke_width: 1
+    data_generator: |
+      const sd = parseFloat(entity.state);
+      const mean = parseFloat(hass.states['sensor.cycle_app_cycle_length_mean_robust']?.state);
+      const lens = (hass.states['sensor.cycle_app_cycle_lengths_calculated']?.state || '').split(',').map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-12);
+      const last = hass.states['sensor.cycle_app_last_period_start']?.state;
+      if (isNaN(sd) || isNaN(mean) || !lens.length || !/^\d{4}-\d{2}-\d{2}$/.test(last || '')) return [];
+      const [y, m, d] = last.split('-').map(Number);
+      const endD = new Date(y, m - 1, d);
+      const startD = new Date(y, m - 1, d - lens.reduce((a, b) => a + b, 0));
+      return [[startD.getTime(), mean - sd], [endD.getTime(), mean - sd]];
