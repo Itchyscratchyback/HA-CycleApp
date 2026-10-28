@@ -126,16 +126,24 @@ custom_fields:
           }
         }
 
+        // Position inside today's segment follows the time of day.
+        const dayW = 360 / total;
+        const nowD = new Date();
+        const secs = nowD.getHours() * 3600 + nowD.getMinutes() * 60 + nowD.getSeconds();
+        const frac = late > 0 ? 0.5 : secs / 86400;
+        const aDay = ang(day) + frac * dayW;
+        const aEnd = late > 0 ? aDay : ang(day) + dayW;
+        const remain = late > 0 ? 1 : Math.max(1, 86400 - secs);
+
         // Progress arc (inner ring): elapsed part of the cycle
         const ri = r - w / 2 - 10;
-        const aDay = ang(day) + (360 / total) / 2;
-        const [px0, py0] = pt(0, ri);
-        const [px1, py1] = pt(aDay, ri);
+        const p0 = (aDay / 360 * 100).toFixed(3), p1 = (aEnd / 360 * 100).toFixed(3);
         const progress = `
           <circle cx="${cx}" cy="${cy}" r="${ri}" fill="none" stroke="#2d2438" stroke-width="4"/>
-          <path d="M ${px0.toFixed(1)} ${py0.toFixed(1)} A ${ri} ${ri} 0 ${aDay > 180 ? 1 : 0} 1 ${px1.toFixed(1)} ${py1.toFixed(1)}"
-                fill="none" stroke="${phaseColor}" stroke-width="4" stroke-linecap="round" opacity="0.9"/>`;
-
+          <circle cx="${cx}" cy="${cy}" r="${ri}" pathLength="100" fill="none" stroke="${phaseColor}" stroke-width="4"
+                  stroke-linecap="round" opacity="0.9" transform="rotate(-90 ${cx} ${cy})" stroke-dasharray="${p0} 100">
+            <animate attributeName="stroke-dasharray" from="${p0} 100" to="${p1} 100" dur="${remain}s" fill="freeze"/>
+          </circle>`;
         // Ovulation marker
         const aOv = ang(ovuD) + (360 / total) / 2;
         const [ox, oy] = pt(aOv, r);
@@ -145,15 +153,18 @@ custom_fields:
           <line x1="${ol1x.toFixed(1)}" y1="${ol1y.toFixed(1)}" x2="${ol2x.toFixed(1)}" y2="${ol2y.toFixed(1)}" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
           <circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4" fill="#fff" opacity="0.95"/>`;
 
-        // Today marker with glow
-        const [mx, my] = pt(aDay, r);
+        // Today marker: drawn at the top and rotated around the centre to its position
+        const [mx, my] = pt(0, r);
         const today = `
-          <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="14" fill="${phaseColor}" opacity="0.25">
-            <animate attributeName="r" values="11;17;11" dur="2.4s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="0.35;0.05;0.35" dur="2.4s" repeatCount="indefinite"/>
-          </circle>
-          <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="8" fill="#3b82f6" stroke="#fff" stroke-width="3"/>`;
-
+          <g transform="rotate(${aDay.toFixed(2)} ${cx} ${cy})">
+            <animateTransform attributeName="transform" type="rotate" from="${aDay.toFixed(2)} ${cx} ${cy}"
+                              to="${aEnd.toFixed(2)} ${cx} ${cy}" dur="${remain}s" fill="freeze"/>
+            <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="14" fill="${phaseColor}" opacity="0.25">
+              <animate attributeName="r" values="11;17;11" dur="2.4s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.35;0.05;0.35" dur="2.4s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="8" fill="#3b82f6" stroke="#fff" stroke-width="3"/>
+          </g>`;
         // Fertility score pips (0-10)
         let pips = '';
         for (let i = 0; i < 10; i++) {
