@@ -1,4 +1,4 @@
-title: Cycle Animated Dashboard
+title: Cycle insight
 views:
   - title: Cycle Overview
     path: cycle_overview
@@ -9,7 +9,7 @@ views:
             type: grid
             cards:
               - type: custom:button-card
-                entity: sensor.cycle_day
+                entity: sensor.cycle_app_cycle_day
                 show_icon: false
                 show_state: false
                 show_name: false
@@ -156,7 +156,7 @@ views:
                 cards:
                   - type: custom:mushroom-template-card
                     primary: Fertility Score
-                    secondary: '{{ states(''sensor.fertility_score'') }}/10'
+                    secondary: '{{ states(''sensor.cycle_app_fertility_score'') }}/10'
                     icon: mdi:flower
                     features_position: bottom
                     vertical: true
@@ -182,22 +182,22 @@ views:
                   action: more-info
                 entity: sensor.predicted_ovulation_date
                 secondary: |2-
-                    {% set s = states('sensor.days_to_ovulation') %}
+                    {% set s = states('sensor.cycle_app_days_to_ovulation') %}
                     {% if s not in ['unknown','unavailable','', none] %}
                       {% set v = s | float(999) %}
                       {% if v > -5 %}
                         {{ v }} Day
                       {% else %}
-                        {{ states('sensor.days_to_next_ovulation_date') }}
+                        {{ states('sensor.cycle_app_days_to_next_ovulation_date') }}
                       {% endif %}
                     {% else %}
-                      {{ states('sensor.days_to_next_ovulation_date') }}
+                      {{ states('sensor.cycle_app_days_to_next_ovulation_date') }}
                     {% endif %}
               - type: custom:mushroom-template-card
                 primary: Days to Creampie
                 secondary: >
-                  {% set v = states('sensor.days_to_pre_period') %} {% if v in
-                  ['unknown','unavailable','', None] %}
+                  {% set v = states('sensor.cycle_app_days_to_pre_period') %} {%
+                  if v in ['unknown','unavailable','', None] %}
                     —
                   {% else %}
                     {% set n = v | int(999) %}
@@ -223,8 +223,8 @@ views:
                   action: none
                 entity: sensor.predicted_next_period_date
                 secondary: |
-                  {{ states('sensor.days_to_next_period') if
-                     states('sensor.days_to_next_period') not in
+                  {{ states('sensor.cycle_app_days_to_next_period') if
+                     states('sensor.cycle_app_days_to_next_period') not in
                      ['unknown','unavailable',''] else '—' }}
           - type: grid
             columns: 2
@@ -232,11 +232,11 @@ views:
             cards:
               - type: custom:mushroom-entity-card
                 name: Cycle Mean
-                entity: sensor.cycle_length_mean_robust
+                entity: sensor.cycle_app_cycle_length_mean_robust
                 icon: mdi:sync
               - type: custom:mushroom-entity-card
                 name: Cycle Dev.
-                entity: sensor.cycle_length_stddev_robust
+                entity: sensor.cycle_app_cycle_length_stddev_robust
                 icon: mdi:sine-wave
           - square: false
             type: grid
@@ -256,7 +256,7 @@ views:
                     entity_id: button.period_started
                   data: {}
                 name: Period Started
-                entity: button.period_started
+                entity: button.cycle_app_period_started
               - show_name: true
                 show_icon: true
                 type: button
@@ -281,7 +281,7 @@ views:
                 tap_action:
                   action: more-info
                 name: ' '
-                entity: button.log_intercourse
+                entity: button.cycle_app_log_intercourse
             columns: 3
           - type: custom:bubble-card
             card_type: button
@@ -302,7 +302,8 @@ views:
                 content: >-
                   ## Future Ovulation Dates
 
-                  {% set start = states('sensor.predicted_ovulation_date') %}
+                  {% set start =
+                  states('sensor.cycle_app_predicted_ovulation_date') %}
 
                   {% set cycle =
                   states('sensor.cycle_length_mean_robust')|float(28) %}
@@ -350,7 +351,8 @@ views:
 
                   ## Future Period Dates
 
-                  {% set start = states('sensor.predicted_next_period_date') %}
+                  {% set start =
+                  states('sensor.cycle_app_predicted_next_period_date') %}
 
 
                   {% if start not in ['unknown','unavailable'] %}
