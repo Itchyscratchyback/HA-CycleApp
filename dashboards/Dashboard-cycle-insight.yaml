@@ -33,9 +33,7 @@ views:
                     Luteal: >-
                       During this phase, some people notice breast tenderness,
                       bloating, fatigue, mood changes, or appetite changes.
-                    Pre-period: >-
-                      This is the Jurassic Shark week, hide all your cholate and
-                      other crunches, dont argue or look them in the eyes.
+                    Pre-period: ''
                 styles:
                   card:
                     - background: '[[[ return variables.background; ]]]'
@@ -134,7 +132,7 @@ views:
                         // Day ticks and labels
                         let ticks = '';
                         for (let d = 1; d <= total; d++) {
-                          const a = ang(d) + (360 / total) / 2;
+                          const a = ang(d);
                           const major = d === 1 || d % 7 === 0;
                           const [x1, y1] = pt(a, r + w / 2 + 3);
                           const [x2, y2] = pt(a, r + w / 2 + (major ? 9 : 6));
@@ -145,16 +143,24 @@ views:
                           }
                         }
 
+                        // Position inside today's segment follows the time of day.
+                        const dayW = 360 / total;
+                        const nowD = new Date();
+                        const secs = nowD.getHours() * 3600 + nowD.getMinutes() * 60 + nowD.getSeconds();
+                        const frac = late > 0 ? 0.5 : secs / 86400;
+                        const aDay = ang(day) + frac * dayW;
+                        const aEnd = late > 0 ? aDay : ang(day) + dayW;
+                        const remain = late > 0 ? 1 : Math.max(1, 86400 - secs);
+
                         // Progress arc (inner ring): elapsed part of the cycle
                         const ri = r - w / 2 - 10;
-                        const aDay = ang(day) + (360 / total) / 2;
-                        const [px0, py0] = pt(0, ri);
-                        const [px1, py1] = pt(aDay, ri);
+                        const p0 = (aDay / 360 * 100).toFixed(3), p1 = (aEnd / 360 * 100).toFixed(3);
                         const progress = `
                           <circle cx="${cx}" cy="${cy}" r="${ri}" fill="none" stroke="#2d2438" stroke-width="4"/>
-                          <path d="M ${px0.toFixed(1)} ${py0.toFixed(1)} A ${ri} ${ri} 0 ${aDay > 180 ? 1 : 0} 1 ${px1.toFixed(1)} ${py1.toFixed(1)}"
-                                fill="none" stroke="${phaseColor}" stroke-width="4" stroke-linecap="round" opacity="0.9"/>`;
-
+                          <circle cx="${cx}" cy="${cy}" r="${ri}" pathLength="100" fill="none" stroke="${phaseColor}" stroke-width="4"
+                                  stroke-linecap="round" opacity="0.9" transform="rotate(-90 ${cx} ${cy})" stroke-dasharray="${p0} 100">
+                            <animate attributeName="stroke-dasharray" from="${p0} 100" to="${p1} 100" dur="${remain}s" fill="freeze"/>
+                          </circle>`;
                         // Ovulation marker
                         const aOv = ang(ovuD) + (360 / total) / 2;
                         const [ox, oy] = pt(aOv, r);
@@ -164,15 +170,18 @@ views:
                           <line x1="${ol1x.toFixed(1)}" y1="${ol1y.toFixed(1)}" x2="${ol2x.toFixed(1)}" y2="${ol2y.toFixed(1)}" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
                           <circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4" fill="#fff" opacity="0.95"/>`;
 
-                        // Today marker with glow
-                        const [mx, my] = pt(aDay, r);
+                        // Today marker: drawn at the top and rotated around the centre to its position
+                        const [mx, my] = pt(0, r);
                         const today = `
-                          <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="14" fill="${phaseColor}" opacity="0.25">
-                            <animate attributeName="r" values="11;17;11" dur="2.4s" repeatCount="indefinite"/>
-                            <animate attributeName="opacity" values="0.35;0.05;0.35" dur="2.4s" repeatCount="indefinite"/>
-                          </circle>
-                          <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="8" fill="#3b82f6" stroke="#fff" stroke-width="3"/>`;
-
+                          <g transform="rotate(${aDay.toFixed(2)} ${cx} ${cy})">
+                            <animateTransform attributeName="transform" type="rotate" from="${aDay.toFixed(2)} ${cx} ${cy}"
+                                              to="${aEnd.toFixed(2)} ${cx} ${cy}" dur="${remain}s" fill="freeze"/>
+                            <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="14" fill="${phaseColor}" opacity="0.25">
+                              <animate attributeName="r" values="11;17;11" dur="2.4s" repeatCount="indefinite"/>
+                              <animate attributeName="opacity" values="0.35;0.05;0.35" dur="2.4s" repeatCount="indefinite"/>
+                            </circle>
+                            <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="8" fill="#3b82f6" stroke="#fff" stroke-width="3"/>
+                          </g>`;
                         // Fertility score pips (0-10)
                         let pips = '';
                         for (let i = 0; i < 10; i++) {
@@ -239,7 +248,6 @@ views:
                 color: '#ff4966'
                 tap_action:
                   action: more-info
-                entity: sensor.predicted_ovulation_date
                 secondary: |2-
                     {% set s = states('sensor.cycle_app_days_to_ovulation') %}
                     {% if s not in ['unknown','unavailable','', none] %}
@@ -252,6 +260,7 @@ views:
                     {% else %}
                       {{ states('sensor.cycle_app_days_to_next_ovulation_date') }}
                     {% endif %}
+                entity: sensor.cycle_app_predicted_ovulation_date
               - type: custom:mushroom-template-card
                 primary: Days to Creampie
                 secondary: >
@@ -268,7 +277,7 @@ views:
                 color: '#FFFFFF'
                 tap_action:
                   action: more-info
-                entity: sensor.pre_period_date
+                entity: sensor.cycle_app_pre_period_date
               - type: custom:mushroom-template-card
                 primary: Days To Period
                 icon: mdi:calendar
@@ -280,23 +289,83 @@ views:
                 multiline_secondary: false
                 hold_action:
                   action: none
-                entity: sensor.predicted_next_period_date
+                entity: sensor.cycle_app_predicted_next_period_date
                 secondary: |
                   {{ states('sensor.cycle_app_days_to_next_period') if
                      states('sensor.cycle_app_days_to_next_period') not in
                      ['unknown','unavailable',''] else '—' }}
-          - type: grid
-            columns: 2
-            square: false
-            cards:
-              - type: custom:mushroom-entity-card
-                name: Cycle Mean
-                entity: sensor.cycle_app_cycle_length_mean_robust
-                icon: mdi:sync
-              - type: custom:mushroom-entity-card
-                name: Cycle Dev.
-                entity: sensor.cycle_app_cycle_length_stddev_robust
-                icon: mdi:sine-wave
+          - type: custom:button-card
+            entity: sensor.cycle_app_cycle_lengths_calculated
+            show_icon: false
+            show_state: false
+            show_name: false
+            variables:
+              background: ''
+              line_color: '#ff6fa5'
+              mean_color: '#63a4ff'
+              text_color: '#d9cfe6'
+              log_scale: true
+              max_points: 24
+            styles:
+              card:
+                - background: '[[[ return variables.background; ]]]'
+                - border-radius: 16px
+                - padding: 8px 12px
+                - box-shadow: none
+              grid:
+                - grid-template-areas: '"spark"'
+                - grid-template-columns: 1fr
+              custom_fields:
+                spark:
+                  - width: 100%
+            custom_fields:
+              spark: |
+                [[[
+                  const lens = String(entity.state || '').split(',')
+                    .map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-variables.max_points);
+                  const tc = variables.text_color;
+                  if (lens.length < 2) {
+                    return `<div style="color:${tc};font-size:12px;opacity:.7;padding:6px 0">Cycle lengths: need at least 2 cycles</div>`;
+                  }
+                  const dev = parseFloat(states['sensor.cycle_app_cycle_length_stddev_robust']?.state);
+                  const mean = parseFloat(states['sensor.cycle_app_cycle_length_mean_robust']?.state);
+                  const lo = Math.min(...lens) - 1, hi = Math.max(...lens) + 1;
+                  const f = variables.log_scale ? Math.log : (v => v);
+                  const norm = v => (f(v) - f(lo)) / (f(hi) - f(lo));
+
+                  const W = 300, H = 60, padX = 4, padY = 1;
+                  const x = i => padX + (i / (lens.length - 1)) * (W - 2 * padX);
+                  const y = v => H - padY - norm(v) * (H - 2 * padY);
+
+                  const pts = lens.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+                  const last = lens[lens.length - 1];
+                  const lx = x(lens.length - 1), ly = y(last);
+                  const dots = lens.slice(0, -1).map((v, i) =>
+                    `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2" fill="${variables.line_color}" opacity=".7"/>`).join('');
+                  const meanLine = isNaN(mean) ? '' :
+                    `<line x1="${padX}" x2="${W - padX}" y1="${y(mean).toFixed(1)}" y2="${y(mean).toFixed(1)}" stroke="${variables.mean_color}" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>`;
+                  const diff = isNaN(mean) ? '' : (last - mean >= 0 ? '+' : '') + (last - mean).toFixed(1);
+
+                  return `
+                  <div style="color:${tc}">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:2px;opacity:.75">
+                      <span>Cycle Mean ${mean} | Dev ${dev}</span>
+                      <span>${lens.length} cycles</span>
+                    </div>
+                    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;margin:2px 0">
+                      ${meanLine}
+                      <polyline points="${pts}" fill="none" stroke="${variables.line_color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+                      ${dots}
+                      <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="6" fill="${variables.line_color}" opacity=".25"/>
+                      <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="${variables.line_color}" stroke="#fff" stroke-width="1.5"/>
+                    </svg>
+                    <div style="display:flex;justify-content:space-between;font-size:12px">
+                      <span>min <b>${Math.min(...lens)}</b> d</span>
+                      <span>last <b>${last}</b> d${diff ? ` (${diff} vs mean)` : ''}</span>
+                      <span>max <b>${Math.max(...lens)}</b> d</span>
+                    </div>
+                  </div>`;
+                ]]]
           - square: false
             type: grid
             cards:
@@ -345,11 +414,11 @@ views:
             card_type: button
             button_type: name
             name: Future Predictions
-            icon: mdi:calendar-heart
             show_state: false
             tap_action:
               action: navigate
               navigation_path: '#future_predictions'
+            icon: mdi:crystal-ball
           - type: custom:bubble-card
             card_type: pop-up
             hash: '#future_predictions'
@@ -448,3 +517,7 @@ views:
                   {% endif %}
             button_type: name
             card_layout: large
+            show_header: true
+            scrolling_effect: true
+            show_icon: false
+            show_name: true
