@@ -5,20 +5,61 @@ entity: sensor.cycle_app_cycle_day
 show_icon: false
 show_state: false
 show_name: false
+variables:
+  # Any CSS color: hex (#1c1226), rgb(), name, or a gradient string.
+  background: '#1c1226'
+  text_color: '#d9cfe6'
+  # Static phase descriptions - edit freely. Leave '' to show nothing.
+  descriptions:
+    Period: 'Bleeding phase. Cramps, lower back pain, tiredness and lower energy are common, and hormone levels are at their lowest.'
+    Follicular: 'Estrogen rises as the body prepares an egg. Many people notice more energy, a better mood and clearer focus.'
+    Fertile: 'Fertile window. Estrogen peaks, and cervical fluid becomes clear and stretchy. Energy and libido are often higher.'
+    Ovulation: 'An egg is released. Some people feel mild one-sided pelvic pain, increased libido or slight spotting.'
+    Luteal: 'During this phase, some people notice breast tenderness, bloating, fatigue, mood changes, or appetite changes.'
+    Pre-period: ''
 styles:
   card:
-    - background: radial-gradient(circle at 50% 35%, #3a2142 0%, #1c1226 70%, #130c1b 100%)
+    - background: '[[[ return variables.background; ]]]'
     - border-radius: 20px
-    - padding: 10px 0
+    - padding: 10px 12px
     - box-shadow: 0 6px 24px rgba(0,0,0,0.35)
     - min-height: 30px
+  grid:
+    - grid-template-areas: '"info ring"'
+    - grid-template-columns: 1fr 300px
+    - align-items: center
+    - column-gap: 12px
   custom_fields:
+    info:
+      - justify-self: start
+      - align-self: center
+      - text-align: left
+      - padding-left: 6px
     ring:
       - width: 300px
       - height: 300px
       - display: block
       - margin: 0 auto
 custom_fields:
+  info: |
+    [[[
+      const get = (e) => (states[e]?.state ?? 'unknown');
+      const num = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+      const total = Math.max(15, Math.min(60, Math.round(num(get('sensor.cycle_app_cycle_length_preferred'), 28))));
+      const day = Math.max(1, Math.round(num(get('sensor.cycle_app_cycle_day'), 1)));
+      const sensorPhase = get('sensor.cycle_app_cycle_phase');
+      const prePeriod = day >= total - 4 && sensorPhase === 'Luteal';
+      const phase = prePeriod ? 'Pre-period' : sensorPhase;
+      const colors = { Period: '#ff5a7a', Follicular: '#63a4ff', Fertile: '#c44bd0',
+                       Ovulation: '#ff4d8d', Luteal: '#6ecb63', 'Pre-period': '#e0b030' };
+      const text = (variables.descriptions || {})[phase] || '';
+      const c = colors[phase] || '#9ca3af';
+      return `<div style="color:${variables.text_color};max-width:100%">
+        <div style="font-size:11px;letter-spacing:3px;opacity:.7">PHASE</div>
+        <div style="font-size:20px;font-weight:700;color:${c};margin:2px 0 8px">${phase}</div>
+        <div style="font-size:13px;line-height:1.45;white-space:normal">${text}</div>
+      </div>`;
+    ]]]
   ring: |
     [[[
       return (function () {
