@@ -1,0 +1,152 @@
+# Requires button-card (HACS). Add via Edit > Add card > Manual.
+# Entity IDs assume the "cycle_app_" prefix; adjust if yours differ.
+type: custom:button-card
+entity: sensor.cycle_app_cycle_day
+show_icon: false
+show_state: false
+show_name: false
+styles:
+  card:
+    - background: radial-gradient(circle at 50% 35%, #3a2142 0%, #1c1226 70%, #130c1b 100%)
+    - border-radius: 20px
+    - padding: 10px 0
+    - box-shadow: 0 6px 24px rgba(0,0,0,0.35)
+    - min-height: 30px
+  custom_fields:
+    ring:
+      - width: 300px
+      - height: 300px
+      - display: block
+      - margin: 0 auto
+custom_fields:
+  ring: |
+    [[[
+      return (function () {
+        const get = (e) => (states[e]?.state ?? 'unknown');
+        const num = (v, d) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+
+        const total  = Math.max(15, Math.min(60, Math.round(num(get('sensor.cycle_app_cycle_length_preferred'), 28))));
+        const luteal = Math.max(10, Math.min(17, Math.round(num(get('number.cycle_app_luteal_length'), 14))));
+        const rawDay = Math.max(1, Math.round(num(get('sensor.cycle_app_cycle_day'), 1)));
+        const day    = Math.min(total, rawDay);
+        const late   = Math.max(0, rawDay - total);
+
+        const phase     = get('sensor.cycle_app_cycle_phase');
+        const toPeriod  = num(get('sensor.cycle_app_days_to_next_period'), 0);
+        const score     = num(get('sensor.cycle_app_fertility_score'), 0);
+        const fertility = get('sensor.cycle_app_fertility_status');
+
+        const ovuD      = Math.max(1, Math.min(total, total - luteal));
+        const fertStart = Math.max(1, ovuD - 5);
+        const fertEnd   = Math.min(total, ovuD + 1);
+        const preStart  = Math.max(1, total - 4);
+        const menseEnd  = Math.min(5, total);
+
+        const colors = {
+          Period: '#ff5a7a', Follicular: '#63a4ff', Fertile: '#c44bd0',
+          Ovulation: '#ff4d8d', Luteal: '#6ecb63'
+        };
+        const phaseColor = colors[phase] || '#9ca3af';
+
+        const S = 300, cx = S / 2, cy = S / 2, r = 100, w = 16;
+        const rad = (deg) => (deg - 90) * Math.PI / 180;
+        const pt  = (a, rr) => [cx + rr * Math.cos(rad(a)), cy + rr * Math.sin(rad(a))];
+        const ang = (d) => ((d - 1) / total) * 360;
+        const arc = (d1, d2, rr) => {
+          const gap = 0.8;
+          let a1 = ang(d1) + gap, a2 = ang(d2 + 1) - gap;
+          if (a2 <= a1) a2 = a1 + 0.1;
+          const [x1, y1] = pt(a1, rr), [x2, y2] = pt(a2, rr);
+          return `M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${rr} ${rr} 0 ${(a2 - a1) > 180 ? 1 : 0} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+        };
+
+        // Segments, later ones draw on top of earlier ones
+        const seg = [
+          { a: 1, b: total, c: '#2d2438' },
+          { a: 1, b: menseEnd, c: 'url(#cr-period)' },
+          { a: menseEnd + 1, b: Math.max(menseEnd + 1, fertStart - 1), c: 'url(#cr-follicular)' },
+          { a: fertStart, b: fertEnd, c: 'url(#cr-fertile)' },
+          { a: fertEnd + 1, b: Math.max(fertEnd + 1, preStart - 1), c: 'url(#cr-luteal)' },
+          { a: preStart, b: total, c: 'url(#cr-pre)' }
+        ].filter(s => s.a <= s.b && s.a <= total)
+         .map(s => `<path d="${arc(s.a, s.b, r)}" fill="none" stroke="${s.c}" stroke-width="${w}" stroke-linecap="butt"/>`).join('');
+
+        // Day ticks and labels
+        let ticks = '';
+        for (let d = 1; d <= total; d++) {
+          const a = ang(d) + (360 / total) / 2;
+          const major = d === 1 || d % 7 === 0;
+          const [x1, y1] = pt(a, r + w / 2 + 3);
+          const [x2, y2] = pt(a, r + w / 2 + (major ? 9 : 6));
+          ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${d === day ? '#fff' : '#6b5b7a'}" stroke-width="${major ? 1.6 : 1}"/>`;
+          if (major) {
+            const [tx, ty] = pt(a, r + w / 2 + 19);
+            ticks += `<text x="${tx.toFixed(1)}" y="${(ty + 3.5).toFixed(1)}" text-anchor="middle" font-size="10" fill="#a898b8">${d}</text>`;
+          }
+        }
+
+        // Progress arc (inner ring): elapsed part of the cycle
+        const ri = r - w / 2 - 10;
+        const aDay = ang(day) + (360 / total) / 2;
+        const [px0, py0] = pt(0, ri);
+        const [px1, py1] = pt(aDay, ri);
+        const progress = `
+          <circle cx="${cx}" cy="${cy}" r="${ri}" fill="none" stroke="#2d2438" stroke-width="4"/>
+          <path d="M ${px0.toFixed(1)} ${py0.toFixed(1)} A ${ri} ${ri} 0 ${aDay > 180 ? 1 : 0} 1 ${px1.toFixed(1)} ${py1.toFixed(1)}"
+                fill="none" stroke="${phaseColor}" stroke-width="4" stroke-linecap="round" opacity="0.9"/>`;
+
+        // Ovulation marker
+        const aOv = ang(ovuD) + (360 / total) / 2;
+        const [ox, oy] = pt(aOv, r);
+        const [ol1x, ol1y] = pt(aOv, r - w / 2 - 3);
+        const [ol2x, ol2y] = pt(aOv, r + w / 2 + 3);
+        const ovMark = `
+          <line x1="${ol1x.toFixed(1)}" y1="${ol1y.toFixed(1)}" x2="${ol2x.toFixed(1)}" y2="${ol2y.toFixed(1)}" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+          <circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4" fill="#fff" opacity="0.95"/>`;
+
+        // Today marker with glow
+        const [mx, my] = pt(aDay, r);
+        const today = `
+          <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="14" fill="${phaseColor}" opacity="0.25">
+            <animate attributeName="r" values="11;17;11" dur="2.4s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.35;0.05;0.35" dur="2.4s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="8" fill="#3b82f6" stroke="#fff" stroke-width="3"/>`;
+
+        // Fertility score pips (0-10)
+        let pips = '';
+        for (let i = 0; i < 10; i++) {
+          const on = i < Math.round(score);
+          pips += `<rect x="${(cx - 45 + i * 9.5).toFixed(1)}" y="${cy + 52}" width="7" height="5" rx="2" fill="${on ? '#c44bd0' : '#3a2f46'}"/>`;
+        }
+
+        const sub = late > 0
+          ? `Period late by ${late} day${late === 1 ? '' : 's'}`
+          : (toPeriod === 0 ? 'Period expected today' : `Period in ${toPeriod} day${toPeriod === 1 ? '' : 's'}`);
+
+        return `
+        <svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}">
+          <defs>
+            <linearGradient id="cr-period" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a93"/><stop offset="1" stop-color="#e11d48"/></linearGradient>
+            <linearGradient id="cr-follicular" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8cc0ff"/><stop offset="1" stop-color="#4f8df0"/></linearGradient>
+            <linearGradient id="cr-fertile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e879f9"/><stop offset="1" stop-color="#9333ea"/></linearGradient>
+            <linearGradient id="cr-luteal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86efac"/><stop offset="1" stop-color="#4caf50"/></linearGradient>
+            <linearGradient id="cr-pre" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#d4a017"/></linearGradient>
+            <filter id="cr-shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/>
+            </filter>
+          </defs>
+          <g filter="url(#cr-shadow)">${seg}</g>
+          ${ticks}
+          ${progress}
+          ${ovMark}
+          ${today}
+          <text x="${cx}" y="${cy - 26}" text-anchor="middle" font-size="11" letter-spacing="3" fill="#a898b8">DAY</text>
+          <text x="${cx}" y="${cy + 14}" text-anchor="middle" font-size="46" font-weight="700" fill="#fff">${rawDay}</text>
+          <text x="${cx}" y="${cy + 34}" text-anchor="middle" font-size="14" font-weight="600" fill="${phaseColor}">${phase}</text>
+          ${pips}
+          <text x="${cx}" y="${cy + 72}" text-anchor="middle" font-size="10" fill="#a898b8">${fertility} fertility</text>
+          <text x="${cx}" y="${S - 6}" text-anchor="middle" font-size="12" fill="#d9cfe6">${sub}</text>
+        </svg>`;
+      })();
+    ]]]
