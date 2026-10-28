@@ -1,0 +1,75 @@
+# Requires button-card (HACS). Add via Edit > Add card > Manual.
+# Compact sparkline of all cycle lengths from sensor.cycle_app_cycle_lengths_calculated.
+# The Y range is always (min - 1) .. (max + 1), so the line stays centered and
+# every 1-day fluctuation is visible. log_scale maps values logarithmically.
+type: custom:button-card
+entity: sensor.cycle_app_cycle_lengths_calculated
+show_icon: false
+show_state: false
+show_name: false
+variables:
+  background: '#1c1226'
+  line_color: '#ff6fa5'
+  mean_color: '#63a4ff'
+  text_color: '#d9cfe6'
+  log_scale: true
+  max_points: 24
+styles:
+  card:
+    - background: '[[[ return variables.background; ]]]'
+    - border-radius: 16px
+    - padding: 8px 12px
+    - box-shadow: none
+  grid:
+    - grid-template-areas: '"spark"'
+    - grid-template-columns: 1fr
+  custom_fields:
+    spark:
+      - width: 100%
+custom_fields:
+  spark: |
+    [[[
+      const lens = String(entity.state || '').split(',')
+        .map(s => parseInt(s)).filter(n => !isNaN(n)).slice(-variables.max_points);
+      const tc = variables.text_color;
+      if (lens.length < 2) {
+        return `<div style="color:${tc};font-size:12px;opacity:.7;padding:6px 0">Cycle lengths: need at least 2 cycles</div>`;
+      }
+      const mean = parseFloat(states['sensor.cycle_app_cycle_length_mean_robust']?.state);
+      const lo = Math.min(...lens) - 1, hi = Math.max(...lens) + 1;
+      const f = variables.log_scale ? Math.log : (v => v);
+      const norm = v => (f(v) - f(lo)) / (f(hi) - f(lo));
+
+      const W = 300, H = 70, padX = 8, padY = 8;
+      const x = i => padX + (i / (lens.length - 1)) * (W - 2 * padX);
+      const y = v => H - padY - norm(v) * (H - 2 * padY);
+
+      const pts = lens.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      const last = lens[lens.length - 1];
+      const lx = x(lens.length - 1), ly = y(last);
+      const dots = lens.slice(0, -1).map((v, i) =>
+        `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2" fill="${variables.line_color}" opacity=".7"/>`).join('');
+      const meanLine = isNaN(mean) ? '' :
+        `<line x1="${padX}" x2="${W - padX}" y1="${y(mean).toFixed(1)}" y2="${y(mean).toFixed(1)}" stroke="${variables.mean_color}" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>`;
+      const diff = isNaN(mean) ? '' : (last - mean >= 0 ? '+' : '') + (last - mean).toFixed(1);
+
+      return `
+      <div style="color:${tc}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:2px;opacity:.75">
+          <span>CYCLE LENGTHS</span>
+          <span>${lens.length} cycles</span>
+        </div>
+        <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;margin:2px 0">
+          ${meanLine}
+          <polyline points="${pts}" fill="none" stroke="${variables.line_color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          ${dots}
+          <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="6" fill="${variables.line_color}" opacity=".25"/>
+          <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="${variables.line_color}" stroke="#fff" stroke-width="1.5"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span>min <b>${Math.min(...lens)}</b> d</span>
+          <span>last <b>${last}</b> d${diff ? ` (${diff} vs mean)` : ''}</span>
+          <span>max <b>${Math.max(...lens)}</b> d</span>
+        </div>
+      </div>`;
+    ]]]
