@@ -1,11 +1,11 @@
-title: Menstrual Tracker v11
+title: Cycle insight+
 views:
   - title: Cycle Intelligence
     path: cycle
     icon: mdi:calendar-heart
     cards:
       - type: custom:button-card
-        entity: sensor.cycle_day
+        entity: sensor.cycle_app_cycle_day
         show_name: false
         show_icon: false
         show_state: false
@@ -13,19 +13,19 @@ views:
           ring: |
             [[[
               const day =
-                Number(states['sensor.cycle_day']?.state || 1);
+                Number(states['sensor.cycle_app_cycle_day']?.state || 1);
 
               const length =
-                Number(states['sensor.cycle_length_preferred']?.state || 28);
+                Number(states['sensor.cycle_app_cycle_length_preferred']?.state || 28);
 
               const pct =
                 Math.max(0, Math.min(100, (day/length)*100));
 
               const phase =
-                states['sensor.cycle_phase']?.state || 'Unknown';
+                states['sensor.cycle_app_cycle_phase']?.state || 'Unknown';
 
               const fertility =
-                states['sensor.fertility_status']?.state || 'Unknown';
+                states['sensor.cycle_app_fertility_status']?.state || 'Unknown';
 
               const circumference = 565;
               const progress = circumference * (pct/100);
@@ -132,38 +132,38 @@ views:
       - type: entities
         title: Current Status
         entities:
-          - entity: sensor.cycle_phase
+          - entity: sensor.cycle_app_cycle_phase
             name: Current Phase
-          - entity: sensor.cycle_day
+          - entity: sensor.cycle_app_cycle_day
             name: Current Cycle Day
-          - entity: sensor.fertility_status
+          - entity: sensor.cycle_app_fertility_status
             name: Fertility Status
-          - entity: sensor.fertility_score
+          - entity: sensor.cycle_app_fertility_score
             name: Fertility Score
-          - entity: sensor.days_to_ovulation
+          - entity: sensor.cycle_app_days_to_ovulation
             name: Days To Ovulation
-          - entity: sensor.days_to_next_period
+          - entity: sensor.cycle_app_days_to_next_period
             name: Days To Period
-          - entity: sensor.cycle_prediction_confidence
+          - entity: sensor.cycle_app_cycle_prediction_confidence
             name: Prediction Confidence
-          - entity: sensor.cycle_data_quality
+          - entity: sensor.cycle_app_cycle_data_quality
             name: Data Quality
       - type: entities
         title: Upcoming Events
         entities:
-          - entity: sensor.predicted_ovulation_date
+          - entity: sensor.cycle_app_predicted_ovulation_date
             name: Upcoming Ovulation
-          - entity: sensor.predicted_next_period_date
+          - entity: sensor.cycle_app_predicted_next_period_date
             name: Upcoming Period
-          - entity: sensor.predicted_next_ovulation_date
+          - entity: sensor.cycle_app_predicted_next_ovulation_date
             name: Following Ovulation
-          - entity: sensor.predicted_following_period_date
+          - entity: sensor.cycle_app_predicted_following_period_date
             name: Following Period
-          - entity: sensor.pre_period_date
+          - entity: sensor.cycle_app_pre_period_date
             name: Pre-Period Date
-          - entity: sensor.days_to_next_ovulation_date
+          - entity: sensor.cycle_app_days_to_next_ovulation_date
             name: Days To Following Ovulation
-          - entity: sensor.days_to_pre_period
+          - entity: sensor.cycle_app_days_to_pre_period
             name: Days To Pre-Period
       - type: markdown
         content: |
@@ -182,37 +182,37 @@ views:
       - type: entities
         title: Prediction Window
         entities:
-          - entity: sensor.earliest_expected_period
+          - entity: sensor.cycle_app_earliest_expected_period
             name: Earliest Expected Period
-          - entity: sensor.predicted_next_period_date
+          - entity: sensor.cycle_app_predicted_next_period_date
             name: Predicted Period
-          - entity: sensor.latest_expected_period
+          - entity: sensor.cycle_app_latest_expected_period
             name: Latest Expected Period
       - type: entities
         title: Statistics
         entities:
-          - entity: sensor.cycle_count
+          - entity: sensor.cycle_app_cycle_count
             name: Recorded Cycles
-          - entity: sensor.period_dates_count
+          - entity: sensor.cycle_app_period_dates_count
             name: Total Period Dates
-          - entity: sensor.last_cycle_length_robust
+          - entity: sensor.cycle_app_last_cycle_length_robust
             name: Last Cycle
-          - entity: sensor.cycle_length_mean_robust
+          - entity: sensor.cycle_app_cycle_length_mean_robust
             name: Robust Mean
-          - entity: sensor.cycle_length_median
+          - entity: sensor.cycle_app_cycle_length_median
             name: Median
-          - entity: sensor.cycle_length_stddev_robust
+          - entity: sensor.cycle_app_cycle_length_stddev_robust
             name: StdDev
-          - entity: sensor.shortest_cycle_length
+          - entity: sensor.cycle_app_shortest_cycle_length
             name: Shortest Cycle
-          - entity: sensor.longest_cycle_length
+          - entity: sensor.cycle_app_longest_cycle_length
             name: Longest Cycle
-          - entity: sensor.cycle_sample_size
+          - entity: sensor.cycle_app_cycle_sample_size
             name: Sample Size
-          - entity: sensor.cycle_outlier_count
+          - entity: sensor.cycle_app_cycle_outlier_count
             name: Outliers
       - type: gauge
-        entity: sensor.cycle_length_stddev_robust
+        entity: sensor.cycle_app_cycle_length_stddev_robust
         name: Cycle Stability
         min: 0
         max: 10
@@ -223,123 +223,49 @@ views:
       - type: entities
         title: Intercourse Analytics
         entities:
-          - entity: sensor.last_intercourse_date
+          - entity: sensor.last_intercourse_date_2
             name: Last Activity
-          - entity: sensor.days_since_intercourse
+          - entity: sensor.days_since_intercourse_3
             name: Days Since Activity
-          - entity: sensor.intercourse_count_current_cycle
+          - entity: sensor.intercourse_count_current_cycle_2
             name: Current Cycle Activity
-          - entity: sensor.intercourse_count_fertile_window
+          - entity: sensor.intercourse_count_fertile_window_3
             name: Fertile Window Activity
-      - type: custom:apexcharts-card
-        graph_span: 30d
-        header:
-          show: true
-          title: Activity Timeline
-        apex_config:
-          chart:
-            type: bar
-            height: 350
-            width: 500
-          plotOptions:
-            bar:
-              horizontal: false
-              columnWidth: '60%'
-          xaxis:
-            type: datetime
-          tooltip:
-            x:
-              format: 'dd MMM yyyy HH:mm'
-          annotations:
-            xaxis:
-              - x: 1
-                x2: 5
-                fillColor: '#ff6fa5'
-                opacity: 0.1
-              - x: 6
-                x2: 10
-                fillColor: '#63a4ff'
-                opacity: 0.1
-              - x: 11
-                x2: 14
-                fillColor: '#ffd54f'
-                opacity: 0.12
-              - x: 15
-                x2: 15
-                fillColor: '#ff4444'
-                opacity: 0.18
-              - x: 16
-                x2: 28
-                fillColor: '#6ecb63'
-                opacity: 0.1
-        series:
-          - entity: text.intercourse_history
-            name: Activity Count
-            color: '#ff6fa5'
-            type: column
-            data_generator: |
-              const s = (entity.state||'').trim();
-              if (!s || ['unknown','unavailable','none','-'].includes(s.toLowerCase())) return [];
-              const parts = s.split(',').map(p => p.trim()).filter(Boolean);
-              const out = [];
-              for (const part of parts) {
-                let ts = part;
-                let val = 1;
-                if (part.includes('|')) {
-                  const split = part.split('|');
-                  ts = split[0] || ts;
-                  val = Number(split[1]);
-                  if (isNaN(val)) val = 1;
-                }
-                // Try strict ISO parse first
-                let ms = Date.parse(ts);
-                // Fallback: replace space with T (common formatting)
-                if (isNaN(ms)) ms = Date.parse(ts.replace(' ', 'T'));
-                // If still invalid, try parsing as YYYY-MM-DD manually (avoid timezone shifts)
-                if (isNaN(ms)) {
-                  const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                  if (m) {
-                    const y = Number(m[1]);
-                    const mo = Number(m[2]) - 1;
-                    const d = Number(m[3]);
-                    ms = Date.UTC(y, mo, d, 0, 0, 0);
-                  }
-                }
-                if (isNaN(ms)) continue;
-                out.push({ x: ms, y: val });
-              }
-              out.sort((a,b) => a.x - b.x);
-              return out;
       - type: markdown
         content: >
 
           ## History Summary
 
 
-          **Current Phase:** {{ states('sensor.cycle_phase') }}
+          **Current Phase:** {{ states('sensor.cycle_app_cycle_phase') }}
 
 
-          **Cycle Day:** {{ states('sensor.cycle_day') }}
+          **Cycle Day:** {{ states('sensor.cycle_app_cycle_day') }}
 
 
-          **Preferred Cycle Length:** {{ states('sensor.cycle_length_preferred')
+          **Preferred Cycle Length:** {{
+          states('sensor.cycle_app_cycle_length_preferred') }} days
+
+
+          **Confidence:** {{
+          states('sensor.cycle_app_cycle_prediction_confidence') }}
+
+
+          **Data Quality:** {{ states('sensor.cycle_app_cycle_data_quality') }}
+
+
+          **Median Length:** {{ states('sensor.cycle_app_cycle_length_median')
           }} days
 
 
-          **Confidence:** {{ states('sensor.cycle_prediction_confidence') }}
-
-
-          **Data Quality:** {{ states('sensor.cycle_data_quality') }}
-
-
-          **Median Length:** {{ states('sensor.cycle_length_median') }} days
-
-
-          **Mean Length:** {{ states('sensor.cycle_length_mean_robust') }} days
+          **Mean Length:** {{
+          states('sensor.cycle_app_cycle_length_mean_robust') }} days
       - type: horizontal-stack
         cards:
-          - type: button
-            entity: button.period_started
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: button.cycle_app_period_started
             name: Period Started
             icon: mdi:calendar-plus
           - type: custom:bubble-card
@@ -350,8 +276,11 @@ views:
             tap_action:
               action: navigate
               navigation_path: '#log_activity'
-          - type: button
-            entity: button.clear_intercourse_history
+            scrolling_effect: false
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: button.cycle_app_clear_intercourse_history
             name: Clear Activity
             icon: mdi:delete
       - type: custom:bubble-card
@@ -364,148 +293,96 @@ views:
             title: Log Activity
             show_header_toggle: false
             entities:
-              - entity: select.intercourse_type
+              - entity: select.cycle_app_intercourse_type
                 name: Who did what
               - type: conditional
                 conditions:
-                  - entity: select.intercourse_type
+                  - entity: select.cycle_app_intercourse_type
                     state_not: Together
-                  - entity: select.intercourse_type
+                  - entity: select.cycle_app_intercourse_type
                     state_not: Not selected
                 row:
-                  entity: select.intercourse_subtype1
+                  entity: select.cycle_app_intercourse_how
                   name: How
-              - entity: select.intercourse_subtype2
+              - entity: select.cycle_app_intercourse_execution
                 name: Execution
-              - entity: select.intercourse_raw
+              - entity: select.cycle_app_intercourse_raw
                 name: Did you go RAW
               - type: conditional
                 conditions:
-                  - entity: select.intercourse_raw
+                  - entity: select.cycle_app_intercourse_raw
                     state: 'Yes'
                 row:
-                  entity: select.intercourse_creampie
+                  entity: select.cycle_app_intercourse_creampie
                   name: Did you make a nice Creampie?
               - type: conditional
                 conditions:
-                  - entity: select.intercourse_raw
+                  - entity: select.cycle_app_intercourse_raw
                     state: Partially
                 row:
-                  entity: select.intercourse_creampie
+                  entity: select.cycle_app_intercourse_creampie
                   name: Did you make a nice Creampie?
           - type: button
-            entity: button.log_intercourse
+            entity: button.cycle_app_log_intercourse
             name: Save Activity
             icon: mdi:content-save-heart
-      - type: entities
-        title: Raw Data
-        show_header_toggle: false
-        entities:
-          - entity: text.period_start_history
-          - entity: text.intercourse_history
-          - entity: sensor.cycle_lengths_calculated
       - type: entities
         title: Diagnostics
         show_header_toggle: false
         entities:
-          - sensor.cycle_phase
-          - sensor.fertility_status
-          - sensor.predicted_ovulation_date
-          - sensor.predicted_next_period_date
-          - sensor.days_to_ovulation
-          - sensor.days_to_next_period
-          - sensor.cycle_prediction_confidence
+          - entity: sensor.cycle_app_cycle_phase
+          - entity: sensor.cycle_app_fertility_status
+          - entity: sensor.cycle_app_predicted_ovulation_date
+          - entity: sensor.cycle_app_predicted_next_period_date
+          - entity: sensor.cycle_app_days_to_ovulation
+          - entity: sensor.cycle_app_days_to_next_period
+          - entity: sensor.cycle_app_cycle_prediction_confidence
       - type: entities
         title: Pregnancy Chance Prediction
         show_header_toggle: false
         entities:
-          - entity: sensor.fertility_window_status
+          - entity: sensor.cycle_app_fertility_window_status
             name: Current Status
           - type: section
             label: Fertility Window
-          - entity: sensor.fertility_window_start
+          - entity: sensor.cycle_app_fertility_window_start
             name: Fertility Window Start
-          - entity: sensor.fertility_window_end
+          - entity: sensor.cycle_app_fertility_window_end
             name: Fertility Window End
           - type: section
             label: Peak Fertility
-          - entity: sensor.peak_fertility_start
+          - entity: sensor.cycle_app_peak_fertility_start
             name: Peak Fertility Start
-          - entity: sensor.peak_fertility_end
+          - entity: sensor.cycle_app_peak_fertility_end
             name: Peak Fertility End
-          - entity: sensor.predicted_ovulation_date
+          - entity: sensor.cycle_app_predicted_ovulation_date
             name: Most Likely Ovulation
-          - entity: sensor.earliest_ovulation_date
+          - entity: sensor.cycle_app_earliest_ovulation_date
             name: Earliest Ovulation
-          - entity: sensor.latest_ovulation_date
+          - entity: sensor.cycle_app_latest_ovulation_date
             name: Latest Ovulation
           - type: section
             label: Fertility Metrics
-          - entity: sensor.fertility_score
+          - entity: sensor.cycle_app_fertility_score
             name: Fertility Score
-          - entity: sensor.fertility_status
+          - entity: sensor.cycle_app_fertility_status
             name: Fertility Status
-          - entity: sensor.days_to_ovulation
+          - entity: sensor.cycle_app_days_to_ovulation
             name: Days To Ovulation
-          - entity: sensor.cycle_prediction_confidence
+          - entity: sensor.cycle_app_cycle_prediction_confidence
             name: Prediction Confidence
-          - entity: sensor.cycle_length_stddev_robust
+          - entity: sensor.cycle_app_cycle_length_stddev_robust
             name: Cycle Variation
-          - entity: sensor.cycle_data_quality
+          - entity: sensor.cycle_app_cycle_data_quality
             name: Data Quality
       - type: entities
         title: Raw Data
         show_header_toggle: false
         entities:
-          - entity: text.period_start_history
-          - entity: text.intercourse_history
-          - entity: sensor.cycle_lengths_calculated
-      - type: markdown
-        title: Future Cycle Forecast
-        content: |
-
-          ## Future Ovulation Dates
-
-          {% set start = states('sensor.predicted_ovulation_date') %}
-          {% set cycle = states('sensor.cycle_length_mean_robust')|float(28) %}
-
-          {% if start not in ['unknown','unavailable'] %}
-          {% set anchor = as_datetime(start) %}
-
-          • {{ anchor.date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*1))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*2))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*3))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*4))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*5))).date() }}
-
-          {% endif %}
-
-          ## Future Period Dates
-
-          {% set start = states('sensor.predicted_next_period_date') %}
-
-          {% if start not in ['unknown','unavailable'] %}
-          {% set anchor = as_datetime(start) %}
-
-          • {{ anchor.date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*1))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*2))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*3))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*4))).date() }}
-
-          • {{ (anchor + timedelta(days=(cycle*5))).date() }}
-
-          {% endif %}
+          - entity: text.cycle_app_period_start_history
+          - entity: text.cycle_app_intercourse_history
+          - entity: sensor.intercourse_history_count
+          - entity: sensor.cycle_app_cycle_lengths_calculated
       - type: custom:bubble-card
         card_type: button
         button_type: name
@@ -526,8 +403,9 @@ views:
 
               ## Future Ovulation Dates
 
-              {% set start = states('sensor.predicted_ovulation_date') %} {% set
-              cycle = states('sensor.cycle_length_mean_robust')|float(28) %}
+              {% set start = states('sensor.cycle_app_predicted_ovulation_date')
+              %} {% set cycle =
+              states('sensor.cycle_app_cycle_length_mean_robust')|float(28) %}
 
               {% if start not in ['unknown','unavailable'] %} {% set anchor =
               as_datetime(start) %}
@@ -542,7 +420,23 @@ views:
 
               • {{ (anchor + timedelta(days=(cycle*4))).date() }}
 
-              • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+              • {{ (anchor + timedelta(days=(cycle*5))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*6))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*7))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*8))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*9))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*10))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*11))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*12))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*13))).date() }}
 
               {% endif %}
 
@@ -550,7 +444,8 @@ views:
 
               ## Future Period Dates
 
-              {% set start = states('sensor.predicted_next_period_date') %}
+              {% set start =
+              states('sensor.cycle_app_predicted_next_period_date') %}
 
               {% if start not in ['unknown','unavailable'] %} {% set anchor =
               as_datetime(start) %}
@@ -565,8 +460,189 @@ views:
 
               • {{ (anchor + timedelta(days=(cycle*4))).date() }}
 
-              • {{ (anchor + timedelta(days=(cycle*4))).date() }}
+              • {{ (anchor + timedelta(days=(cycle*5))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*6))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*7))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*8))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*9))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*10))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*11))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*12))).date() }}
+
+              • {{ (anchor + timedelta(days=(cycle*13))).date() }}
 
               {% endif %}
         button_type: name
         card_layout: large-2-rows
+      - type: custom:apexcharts-card
+        graph_span: 31d
+        span:
+          end: day
+        header:
+          show: true
+          title: Activity per day (31 days)
+        yaxis:
+          - min: 0
+            decimals: 0
+            apex_config:
+              forceNiceScale: true
+              tickAmount: 4
+        apex_config:
+          chart:
+            type: bar
+            stacked: true
+            height: 350
+          plotOptions:
+            bar:
+              columnWidth: 70%
+          grid:
+            show: true
+          xaxis:
+            type: datetime
+            labels:
+              datetimeUTC: false
+              format: dd MMM
+          legend:
+            show: true
+          dataLabels:
+            formatter: |
+              EVAL:function(val) { return val > 0 ? '👑' : ''; }
+          tooltip:
+            custom: |
+              EVAL:function(o) {
+                const s = o.w.config.series[o.seriesIndex];
+                const pt = s.data[o.dataPointIndex];
+                const d = new Date(pt[0]);
+                const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                const g = s.name.startsWith('👑') ? 'Crown' : s.name;
+                const recs = (((window.__cycleDays || {})[k]) || {})[g] || [];
+                if (!recs.length) return '<div style="display:none"></div>';
+                const labels = {
+                  intercourse_type: 'Type', intercourse_subtype1: 'How',
+                  intercourse_subtype2: 'Execution', intercourse_raw: 'RAW',
+                  intercourse_creampie: 'Creampie', cycle_day: 'Cycle day'
+                };
+                let html = '<div style="padding:8px;font-size:12px"><b>' + k + ' - ' + s.name + ' (' + recs.length + ')</b>';
+                recs.forEach(r => {
+                  html += '<hr style="margin:4px 0">';
+                  html += '<b>' + (r.timestamp || '').slice(11, 16) + '</b>';
+                  Object.keys(labels).forEach(f => {
+                    if (r[f] !== undefined && r[f] !== '' && r[f] !== 'Not selected') {
+                      html += '<br>' + labels[f] + ': ' + r[f] + (f === 'intercourse_creampie' && r[f] === 'Yes' ? ' 👑' : '');
+                    }
+                  });
+                });
+                return html + '</div>';
+              }
+        series:
+          - entity: sensor.intercourse_timeline
+            name: Together
+            color: '#ff6fa5'
+            type: column
+            show:
+              datalabels: false
+            data_generator: >
+              const all = {}; const key = d => d.getFullYear() + '-' +
+              String(d.getMonth()+1).padStart(2,'0') + '-' +
+              String(d.getDate()).padStart(2,'0');
+
+              (entity.attributes.records || []).forEach(r => {
+                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
+              });
+
+              window.__cycleDays = all;
+
+              const t = new Date(); t.setHours(0,0,0,0); const out = [];
+
+              for (let i = 30; i >= 0; i--) { const d = new Date(t);
+              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
+              || {})['Together'] || []).length]); }
+
+              return out;
+          - entity: sensor.intercourse_timeline
+            name: F2M
+            color: '#63a4ff'
+            type: column
+            show:
+              datalabels: false
+            data_generator: >
+              const all = {}; const key = d => d.getFullYear() + '-' +
+              String(d.getMonth()+1).padStart(2,'0') + '-' +
+              String(d.getDate()).padStart(2,'0');
+
+              (entity.attributes.records || []).forEach(r => {
+                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
+              });
+
+              window.__cycleDays = all;
+
+              const t = new Date(); t.setHours(0,0,0,0); const out = [];
+
+              for (let i = 30; i >= 0; i--) { const d = new Date(t);
+              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
+              || {})['F2M'] || []).length]); }
+
+              return out;
+          - entity: sensor.intercourse_timeline
+            name: M2F
+            color: '#ffd54f'
+            type: column
+            show:
+              datalabels: false
+            data_generator: >
+              const all = {}; const key = d => d.getFullYear() + '-' +
+              String(d.getMonth()+1).padStart(2,'0') + '-' +
+              String(d.getDate()).padStart(2,'0');
+
+              (entity.attributes.records || []).forEach(r => {
+                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
+              });
+
+              window.__cycleDays = all;
+
+              const t = new Date(); t.setHours(0,0,0,0); const out = [];
+
+              for (let i = 30; i >= 0; i--) { const d = new Date(t);
+              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
+              || {})['M2F'] || []).length]); }
+
+              return out;
+          - entity: sensor.intercourse_timeline
+            name: 👑 Creampie
+            color: '#ffc107'
+            type: column
+            show:
+              datalabels: true
+            data_generator: >
+              const all = {}; const key = d => d.getFullYear() + '-' +
+              String(d.getMonth()+1).padStart(2,'0') + '-' +
+              String(d.getDate()).padStart(2,'0');
+
+              (entity.attributes.records || []).forEach(r => {
+                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
+              });
+
+              window.__cycleDays = all;
+
+              const t = new Date(); t.setHours(0,0,0,0); const out = [];
+
+              for (let i = 30; i >= 0; i--) { const d = new Date(t);
+              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
+              || {})['Crown'] || []).length]); }
+
+              return out;
