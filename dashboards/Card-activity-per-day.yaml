@@ -1,6 +1,7 @@
-# Requires apexcharts-card (HACS). Replace the entity below if yours differs
-# (e.g. sensor.cycle_app_intercourse_timeline).
-# Colors: Together #ff6fa5 | F2M #63a4ff | M2F #ffd54f
+# Requires apexcharts-card (HACS). Add via Edit > Add card > Manual.
+# Replace sensor.intercourse_timeline with your entity ID if it differs.
+# Bars: Together #ff6fa5 | F2M #63a4ff | M2F #ffd54f | Creampie (crown) #ffc107
+# Click a legend item to hide/show it; the crown item filters creampie=Yes logs.
 type: custom:apexcharts-card
 graph_span: 31d
 span:
@@ -8,6 +9,12 @@ span:
 header:
   show: true
   title: Activity per day (31 days)
+yaxis:
+  - min: 0
+    decimals: 0
+    apex_config:
+      forceNiceScale: true
+      tickAmount: 4
 apex_config:
   chart:
     type: bar
@@ -16,27 +23,18 @@ apex_config:
   plotOptions:
     bar:
       columnWidth: '70%'
+  grid:
+    show: true
   xaxis:
     type: datetime
     labels:
+      datetimeUTC: false
       format: 'dd MMM'
   legend:
     show: true
   dataLabels:
-    enabled: true
-    offsetY: 8
-    style:
-      fontSize: '16px'
     formatter: |
-      EVAL:function(val, o) {
-        const s = o.w.config.series[o.seriesIndex];
-        const pt = s.data[o.dataPointIndex];
-        const days = window.__cycleDays || {};
-        const key = new Date(pt[0]);
-        const k = key.getFullYear() + '-' + String(key.getMonth()+1).padStart(2,'0') + '-' + String(key.getDate()).padStart(2,'0');
-        const recs = ((days[k] || {})[s.name]) || [];
-        return recs.some(r => r.intercourse_creampie === 'Yes') ? '👑' : '';
-      }
+      EVAL:function(val) { return val > 0 ? '👑' : ''; }
   tooltip:
     custom: |
       EVAL:function(o) {
@@ -44,7 +42,9 @@ apex_config:
         const pt = s.data[o.dataPointIndex];
         const d = new Date(pt[0]);
         const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-        const recs = (((window.__cycleDays || {})[k]) || {})[s.name] || [];
+        const g = s.name.startsWith('👑') ? 'Crown' : s.name;
+        const recs = (((window.__cycleDays || {})[k]) || {})[g] || [];
+        if (!recs.length) return '<div style="display:none"></div>';
         const labels = {
           intercourse_type: 'Type', intercourse_subtype1: 'How',
           intercourse_subtype2: 'Execution', intercourse_raw: 'RAW',
@@ -62,52 +62,72 @@ apex_config:
         });
         return html + '</div>';
       }
-yaxis:
-  - min: 0
-    decimals: 0
-    apex_config:
-      forceNiceScale: true
-      tickAmount: 4
 series:
   - entity: sensor.intercourse_timeline
     name: Together
     color: '#ff6fa5'
     type: column
     show:
-      datalabels: true
-      legend_value: false
+      datalabels: false
     data_generator: |
-      const recs = entity.attributes.records || [];
-      const all = {};
-      recs.forEach(r => {
-        const k = (r.timestamp || '').slice(0, 10);
-        const t = r.intercourse_type;
-        if (!k || !t) return;
-        all[k] = all[k] || {};
-        (all[k][t] = all[k][t] || []).push(r);
+      const all = {}; const key = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      (entity.attributes.records || []).forEach(r => {
+        const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+        const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+        all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
       });
       window.__cycleDays = all;
-      return Object.keys(all).filter(k => all[k]['Together'])
-        .map(k => [new Date(k + 'T00:00:00').getTime(), all[k]['Together'].length]);
+      const t = new Date(); t.setHours(0,0,0,0); const out = [];
+      for (let i = 30; i >= 0; i--) { const d = new Date(t); d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)] || {})['Together'] || []).length]); }
+      return out;
   - entity: sensor.intercourse_timeline
     name: F2M
     color: '#63a4ff'
     type: column
     show:
-      datalabels: true
-      legend_value: false
+      datalabels: false
     data_generator: |
-      const all = window.__cycleDays || {};
-      return Object.keys(all).filter(k => all[k]['F2M'])
-        .map(k => [new Date(k + 'T00:00:00').getTime(), all[k]['F2M'].length]);
+      const all = {}; const key = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      (entity.attributes.records || []).forEach(r => {
+        const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+        const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+        all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
+      });
+      window.__cycleDays = all;
+      const t = new Date(); t.setHours(0,0,0,0); const out = [];
+      for (let i = 30; i >= 0; i--) { const d = new Date(t); d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)] || {})['F2M'] || []).length]); }
+      return out;
   - entity: sensor.intercourse_timeline
     name: M2F
     color: '#ffd54f'
     type: column
     show:
-      datalabels: true
-      legend_value: false
+      datalabels: false
     data_generator: |
-      const all = window.__cycleDays || {};
-      return Object.keys(all).filter(k => all[k]['M2F'])
-        .map(k => [new Date(k + 'T00:00:00').getTime(), all[k]['M2F'].length]);
+      const all = {}; const key = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      (entity.attributes.records || []).forEach(r => {
+        const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+        const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+        all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
+      });
+      window.__cycleDays = all;
+      const t = new Date(); t.setHours(0,0,0,0); const out = [];
+      for (let i = 30; i >= 0; i--) { const d = new Date(t); d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)] || {})['M2F'] || []).length]); }
+      return out;
+  - entity: sensor.intercourse_timeline
+    name: 👑 Creampie
+    color: '#ffc107'
+    type: column
+    show:
+      datalabels: true
+    data_generator: |
+      const all = {}; const key = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      (entity.attributes.records || []).forEach(r => {
+        const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
+        const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
+        all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
+      });
+      window.__cycleDays = all;
+      const t = new Date(); t.setHours(0,0,0,0); const out = [];
+      for (let i = 30; i >= 0; i--) { const d = new Date(t); d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)] || {})['Crown'] || []).length]); }
+      return out;
