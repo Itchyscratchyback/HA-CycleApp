@@ -30,7 +30,7 @@ SELECTS = {
     ),
     "intercourse_subtype1": (
         "Intercourse How",
-        [NOT_SELECTED, "Blowjob", "Handjob", "Creamfilljob", "Oystercleaning"],
+        [NOT_SELECTED, "Blowjob", "Handjob", "Creamfilljob", "Oystercleaning", "Bodyshot"],
     ),
     "intercourse_subtype2": (
         "Intercourse Execution",
