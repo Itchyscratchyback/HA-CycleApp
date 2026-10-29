@@ -1,0 +1,52 @@
+# Requires button-card (HACS). Add via Edit > Add card > Manual.
+# Rate = Together logs matching the filter / all Together logs * 100.
+type: custom:button-card
+entity: sensor.cycle_app_intercourse_history_count
+show_icon: false
+show_state: false
+show_name: false
+variables:
+  match_field: intercourse_raw
+  match_value: 'Partially'
+  label: PARTIALLY RAW
+  emoji: '⚠️'
+  background: '#1c1226'
+  text_color: '#d9cfe6'
+  accent: '#fbbf24'
+styles:
+  card:
+    - background: '[[[ return variables.background; ]]]'
+    - border-radius: 16px
+    - padding: 12px
+    - box-shadow: none
+  grid:
+    - grid-template-areas: '"pct"'
+    - grid-template-columns: 1fr
+custom_fields:
+  pct: |
+    [[[
+      const all = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+      const recs = all.filter(r => r.intercourse_type === 'Together');
+      const total = recs.length;
+      const tc = variables.text_color, ac = variables.accent;
+      if (isNaN(total) || total <= 0) {
+        return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+      }
+      const n = recs.filter(r => r[variables.match_field] === variables.match_value).length;
+      const pct = Math.min(100, n / total * 100);
+      const R = 38, C = 2 * Math.PI * R;
+      return `
+      <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+        <svg viewBox="0 0 100 100" width="96" height="96">
+          <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+          <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                  stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+          <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+        </svg>
+        <div>
+          <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+          <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+          <div style="font-size:13px">${n} of ${total} Together logs</div>
+        </div>
+      </div>`;
+    ]]]
