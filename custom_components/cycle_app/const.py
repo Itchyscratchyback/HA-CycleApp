@@ -40,6 +40,10 @@ SELECTS = {
         "Intercourse RAW",
         [NOT_SELECTED, "Yes", "No", "Partially"],
     ),
+    "intercourse_ending": (
+        "Intercourse Ending",
+        [NOT_SELECTED, "Mouthpie", "Bodyshot", "Mouthpie & Bodyshot"],
+    ),
     "intercourse_creampie": (
         "Intercourse Creampie",
         [NOT_SELECTED, "Yes", "No", "Partially"],

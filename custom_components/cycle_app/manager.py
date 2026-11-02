@@ -212,6 +212,9 @@ class CycleManager:
                 ),
                 "intercourse_subtype2": sel["intercourse_subtype2"],
                 "intercourse_raw": raw,
+                "intercourse_ending": (
+                    sel["intercourse_ending"] if needs_ending else ""
+                ),
                 "intercourse_creampie": (
                     sel["intercourse_creampie"] if needs_creampie else ""
                 ),
