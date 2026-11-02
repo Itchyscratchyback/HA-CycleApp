@@ -48,7 +48,7 @@ apex_config:
         const labels = {
           intercourse_type: 'Type', intercourse_subtype1: 'How',
           intercourse_subtype2: 'Execution', intercourse_raw: 'RAW',
-          intercourse_creampie: 'Creampie', cycle_day: 'Cycle day'
+          intercourse_ending: 'Ending', intercourse_creampie: 'Creampie', cycle_day: 'Cycle day'
         };
         let html = '<div style="padding:8px;font-size:12px"><b>' + k + ' - ' + s.name + ' (' + recs.length + ')</b>';
         recs.forEach(r => {
