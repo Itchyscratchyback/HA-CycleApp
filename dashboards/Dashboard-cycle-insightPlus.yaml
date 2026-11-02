@@ -304,6 +304,15 @@ views:
                 row:
                   entity: select.cycle_app_intercourse_how
                   name: How
+              - type: conditional
+                conditions:
+                  - entity: select.cycle_app_intercourse_type
+                    state: F2M
+                  - entity: select.cycle_app_intercourse_how
+                    state: Blowjob
+                row:
+                  entity: select.cycle_app_intercourse_ending
+                  name: How did things end?
               - entity: select.cycle_app_intercourse_execution
                 name: Execution
               - entity: select.cycle_app_intercourse_raw
