@@ -14,6 +14,9 @@ variables:
   text_color: '#d9cfe6'
   log_scale: true
   max_points: 24
+  show_grid: true
+  grid_color: '#ffffff'
+  grid_label_max: 12
 styles:
   card:
     - background: '[[[ return variables.background; ]]]'
@@ -35,14 +38,26 @@ custom_fields:
       if (lens.length < 2) {
         return `<div style="color:${tc};font-size:12px;opacity:.7;padding:6px 0">Cycle lengths: need at least 2 cycles</div>`;
       }
+      const dev = parseFloat(states['sensor.cycle_app_cycle_length_stddev_robust']?.state);
       const mean = parseFloat(states['sensor.cycle_app_cycle_length_mean_robust']?.state);
       const lo = Math.min(...lens) - 1, hi = Math.max(...lens) + 1;
       const f = variables.log_scale ? Math.log : (v => v);
       const norm = v => (f(v) - f(lo)) / (f(hi) - f(lo));
 
-      const W = 300, H = 70, padX = 8, padY = 8;
-      const x = i => padX + (i / (lens.length - 1)) * (W - 2 * padX);
+      const W = 300, H = 80, padL = 20, padX = 8, padY = 8;
+      const x = i => padL + (i / (lens.length - 1)) * (W - padL - padX);
       const y = v => H - padY - norm(v) * (H - 2 * padY);
+
+      // One horizontal line per cycle day in range; labels are thinned to stay readable.
+      let grid = '';
+      if (variables.show_grid) {
+        const step = Math.max(1, Math.ceil((hi - lo + 1) / variables.grid_label_max));
+        for (let d = lo; d <= hi; d++) {
+          const gy = y(d).toFixed(1), lab = (d - lo) % step === 0;
+          grid += `<line x1="${padL}" x2="${W - padX}" y1="${gy}" y2="${gy}" stroke="${variables.grid_color}" stroke-width="0.5" opacity="${lab ? 0.22 : 0.1}"/>`;
+          if (lab) grid += `<text x="${padL - 4}" y="${(+gy + 2.5).toFixed(1)}" text-anchor="end" font-size="7" fill="${tc}" opacity="0.7">${d}</text>`;
+        }
+      }
 
       const pts = lens.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
       const last = lens[lens.length - 1];
@@ -50,16 +65,17 @@ custom_fields:
       const dots = lens.slice(0, -1).map((v, i) =>
         `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2" fill="${variables.line_color}" opacity=".7"/>`).join('');
       const meanLine = isNaN(mean) ? '' :
-        `<line x1="${padX}" x2="${W - padX}" y1="${y(mean).toFixed(1)}" y2="${y(mean).toFixed(1)}" stroke="${variables.mean_color}" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>`;
+        `<line x1="${padL}" x2="${W - padX}" y1="${y(mean).toFixed(1)}" y2="${y(mean).toFixed(1)}" stroke="${variables.mean_color}" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>`;
       const diff = isNaN(mean) ? '' : (last - mean >= 0 ? '+' : '') + (last - mean).toFixed(1);
 
       return `
       <div style="color:${tc}">
         <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:2px;opacity:.75">
-          <span>CYCLE LENGTHS</span>
+          <span>Cycle Mean ${isNaN(mean) ? '-' : mean} | Dev ${isNaN(dev) ? '-' : dev}</span>
           <span>${lens.length} cycles</span>
         </div>
         <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;margin:2px 0">
+          ${grid}
           ${meanLine}
           <polyline points="${pts}" fill="none" stroke="${variables.line_color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
           ${dots}
