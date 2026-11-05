@@ -6,6 +6,15 @@ show_name: false
 variables:
   background: ''
   text_color: '#d9cfe6'
+  # Fertility pips: filled pips pulse. 10/10 = pulse_fast seconds per cycle,
+  # 1/10 = pulse_slow seconds, linear in between (5/10 is about 5.5 s).
+  pip_color: '#c44bd0'
+  pip_off_color: '#3a2f46'
+  pulse_enabled: true
+  pulse_min_opacity: 0
+  pulse_max_opacity: 0.95
+  pulse_fast: 1
+  pulse_slow: 10
   descriptions:
     Period: >-
       Bleeding phase. Cramps, lower back pain, tiredness and lower energy are
@@ -173,14 +182,25 @@ custom_fields:
           </g>`;
         // Fertility score pips (0-10)
         let pips = '';
+        const lit = Math.max(0, Math.min(10, Math.round(score)));
+        const pulseDur = variables.pulse_fast + (10 - lit) / 9 * (variables.pulse_slow - variables.pulse_fast);
+        const pMin = variables.pulse_min_opacity, pMax = variables.pulse_max_opacity;
         for (let i = 0; i < 10; i++) {
-          const on = i < Math.round(score);
-          pips += `<rect x="${(cx - 45 + i * 9.5).toFixed(1)}" y="${cy + 52}" width="7" height="5" rx="2" fill="${on ? '#c44bd0' : '#3a2f46'}"/>`;
+          const on = i < lit;
+          const anim = (on && variables.pulse_enabled)
+            ? `<animate attributeName="opacity" values="${pMin};${pMax};${pMin}" dur="${pulseDur.toFixed(2)}s" repeatCount="indefinite"/>`
+            : '';
+          pips += `<rect x="${(cx - 45 + i * 9.5).toFixed(1)}" y="${cy + 52}" width="7" height="5" rx="2" fill="${on ? variables.pip_color : variables.pip_off_color}">${anim}</rect>`;
         }
 
-        const sub = late > 0
-          ? `Period late by ${late} day${late === 1 ? '' : 's'}`
-          : (toPeriod === 0 ? 'Period expected today' : `Period in ${toPeriod} day${toPeriod === 1 ? '' : 's'}`);
+        // Window around the predicted date: +/- the (rounded up) robust deviation.
+        const dev = Math.ceil(num(get('sensor.cycle_app_cycle_length_stddev_robust'), 0));
+        const untilPred = total - rawDay;
+        const sub = untilPred > dev
+          ? `Period in ${untilPred} day${untilPred === 1 ? '' : 's'}`
+          : (untilPred >= -dev
+            ? 'Period might start today'
+            : `Period late for ${-untilPred - dev} day${(-untilPred - dev) === 1 ? '' : 's'}`);
 
         return `
         <svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}">
