@@ -1,22 +1,28 @@
-# Requires button-card (HACS). Add via Edit > Add card > Manual.
-# Entity IDs assume the "cycle_app_" prefix; adjust if yours differ.
 type: custom:button-card
 entity: sensor.cycle_app_cycle_day
 show_icon: false
 show_state: false
 show_name: false
 variables:
-  # Any CSS color: hex (#1c1226), rgb(), name, or a gradient string.
-  background: '#1c1226'
+  background: ''
   text_color: '#d9cfe6'
-  # Static phase descriptions - edit freely. Leave '' to show nothing.
   descriptions:
-    Period: 'Bleeding phase. Cramps, lower back pain, tiredness and lower energy are common, and hormone levels are at their lowest.'
-    Follicular: 'Estrogen rises as the body prepares an egg. Many people notice more energy, a better mood and clearer focus.'
-    Fertile: 'Fertile window. Estrogen peaks, and cervical fluid becomes clear and stretchy. Energy and libido are often higher.'
-    Ovulation: 'An egg is released. Some people feel mild one-sided pelvic pain, increased libido or slight spotting.'
-    Luteal: 'During this phase, some people notice breast tenderness, bloating, fatigue, mood changes, or appetite changes.'
-    Pre-period: ''
+    Period: >-
+      Bleeding phase. Cramps, lower back pain, tiredness and lower energy are
+      common, and hormone levels are at their lowest.
+    Follicular: >-
+      Estrogen rises as the body prepares an egg. Many people notice more
+      energy, a better mood and clearer focus.
+    Fertile: >-
+      Fertile window. Estrogen peaks, and cervical fluid becomes clear and
+      stretchy. Energy and libido are often higher.
+    Ovulation: >-
+      An egg is released. Some people feel mild one-sided pelvic pain, increased
+      libido or slight spotting.
+    Luteal: >-
+      During this phase, some people notice breast tenderness, bloating,
+      fatigue, mood changes, or appetite changes.
+    Pre-period: This is shark week, no food is safe, hide choclolate and other snacks!
 styles:
   card:
     - background: '[[[ return variables.background; ]]]'
