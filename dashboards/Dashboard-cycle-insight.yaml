@@ -379,9 +379,9 @@ views:
                   action: perform-action
                   perform_action: button.press
                   confirmation:
-                    text: Weet je het zeker?
+                    text: Nieuwe cycle starten?
                   target:
-                    entity_id: button.period_started
+                    entity_id: button.cycle_app_period_started
                   data: {}
                 name: Period Started
                 entity: button.cycle_app_period_started

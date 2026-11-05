@@ -268,6 +268,15 @@ views:
             entity: button.cycle_app_period_started
             name: Period Started
             icon: mdi:calendar-plus
+            tap_action:
+              action: none
+            hold_action:
+              action: perform-action
+              perform_action: button.press
+              confirmation:
+                text: Nieuwe cycle starten?
+              target:
+                entity_id: button.cycle_app_period_started
           - type: custom:bubble-card
             card_type: button
             button_type: name
