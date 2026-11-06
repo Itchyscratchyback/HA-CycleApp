@@ -16,6 +16,13 @@ views:
                 variables:
                   background: ''
                   text_color: '#d9cfe6'
+                  pip_color: '#c44bd0'
+                  pip_off_color: '#3a2f46'
+                  pulse_enabled: true
+                  pulse_min_opacity: 0.4
+                  pulse_max_opacity: 1
+                  pulse_fast: 1
+                  pulse_slow: 7
                   descriptions:
                     Period: >-
                       Bleeding phase. Cramps, lower back pain, tiredness and
@@ -33,7 +40,9 @@ views:
                     Luteal: >-
                       During this phase, some people notice breast tenderness,
                       bloating, fatigue, mood changes, or appetite changes.
-                    Pre-period: ''
+                    Pre-period: >-
+                      This is shark week, no food is safe, hide choclolate and
+                      other snacks!
                 styles:
                   card:
                     - background: '[[[ return variables.background; ]]]'
@@ -184,14 +193,25 @@ views:
                           </g>`;
                         // Fertility score pips (0-10)
                         let pips = '';
+                        const lit = Math.max(0, Math.min(10, Math.round(score)));
+                        const pulseDur = variables.pulse_fast + (10 - lit) / 9 * (variables.pulse_slow - variables.pulse_fast);
+                        const pMin = variables.pulse_min_opacity, pMax = variables.pulse_max_opacity;
                         for (let i = 0; i < 10; i++) {
-                          const on = i < Math.round(score);
-                          pips += `<rect x="${(cx - 45 + i * 9.5).toFixed(1)}" y="${cy + 52}" width="7" height="5" rx="2" fill="${on ? '#c44bd0' : '#3a2f46'}"/>`;
+                          const on = i < lit;
+                          const anim = (on && variables.pulse_enabled)
+                            ? `<animate attributeName="opacity" values="${pMin};${pMax};${pMin}" dur="${pulseDur.toFixed(2)}s" repeatCount="indefinite"/>`
+                            : '';
+                          pips += `<rect x="${(cx - 45 + i * 9.5).toFixed(1)}" y="${cy + 52}" width="7" height="5" rx="2" fill="${on ? variables.pip_color : variables.pip_off_color}">${anim}</rect>`;
                         }
 
-                        const sub = late > 0
-                          ? `Period late by ${late} day${late === 1 ? '' : 's'}`
-                          : (toPeriod === 0 ? 'Period expected today' : `Period in ${toPeriod} day${toPeriod === 1 ? '' : 's'}`);
+                        // Window around the predicted date: +/- the (rounded up) robust deviation.
+                        const dev = Math.ceil(num(get('sensor.cycle_app_cycle_length_stddev_robust'), 0));
+                        const untilPred = total - rawDay;
+                        const sub = untilPred > dev
+                          ? `Period in ${untilPred} day${untilPred === 1 ? '' : 's'}`
+                          : (untilPred >= -dev
+                            ? 'Period might start today'
+                            : `Period late for ${-untilPred - dev} day${(-untilPred - dev) === 1 ? '' : 's'}`);
 
                         return `
                         <svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}">
@@ -222,19 +242,13 @@ views:
               - square: false
                 type: grid
                 cards:
-                  - type: custom:mushroom-template-card
-                    primary: Fertility Score
-                    secondary: '{{ states(''sensor.cycle_app_fertility_score'') }}/10'
-                    icon: mdi:flower
-                    features_position: bottom
-                    vertical: true
                   - type: shortcut
                     tap_action:
                       action: navigate
                       navigation_path: /pudding-rad
                     vertical: true
                     icon: mdi:ferris-wheel
-                columns: 2
+                columns: 1
             columns: 1
           - type: grid
             columns: 3
@@ -306,6 +320,9 @@ views:
               text_color: '#d9cfe6'
               log_scale: true
               max_points: 24
+              show_grid: true
+              grid_color: '#ffffff'
+              grid_label_max: 12
             styles:
               card:
                 - background: '[[[ return variables.background; ]]]'
@@ -333,9 +350,20 @@ views:
                   const f = variables.log_scale ? Math.log : (v => v);
                   const norm = v => (f(v) - f(lo)) / (f(hi) - f(lo));
 
-                  const W = 300, H = 60, padX = 4, padY = 1;
-                  const x = i => padX + (i / (lens.length - 1)) * (W - 2 * padX);
+                  const W = 300, H = 80, padL = 20, padX = 8, padY = 8;
+                  const x = i => padL + (i / (lens.length - 1)) * (W - padL - padX);
                   const y = v => H - padY - norm(v) * (H - 2 * padY);
+
+                  // One horizontal line per cycle day in range; labels are thinned to stay readable.
+                  let grid = '';
+                  if (variables.show_grid) {
+                    const step = Math.max(1, Math.ceil((hi - lo + 1) / variables.grid_label_max));
+                    for (let d = lo; d <= hi; d++) {
+                      const gy = y(d).toFixed(1), lab = (d - lo) % step === 0;
+                      grid += `<line x1="${padL}" x2="${W - padX}" y1="${gy}" y2="${gy}" stroke="${variables.grid_color}" stroke-width="0.5" opacity="${lab ? 0.22 : 0.1}"/>`;
+                      if (lab) grid += `<text x="${padL - 4}" y="${(+gy + 2.5).toFixed(1)}" text-anchor="end" font-size="7" fill="${tc}" opacity="0.7">${d}</text>`;
+                    }
+                  }
 
                   const pts = lens.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
                   const last = lens[lens.length - 1];
@@ -343,18 +371,19 @@ views:
                   const dots = lens.slice(0, -1).map((v, i) =>
                     `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2" fill="${variables.line_color}" opacity=".7"/>`).join('');
                   const meanLine = isNaN(mean) ? '' :
-                    `<line x1="${padX}" x2="${W - padX}" y1="${y(mean).toFixed(1)}" y2="${y(mean).toFixed(1)}" stroke="${variables.mean_color}" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>`;
+                    `<line x1="${padL}" x2="${W - padX}" y1="${y(mean).toFixed(1)}" y2="${y(mean).toFixed(1)}" stroke="${variables.mean_color}" stroke-width="1" stroke-dasharray="4 3" opacity=".8"/>`;
                   const diff = isNaN(mean) ? '' : (last - mean >= 0 ? '+' : '') + (last - mean).toFixed(1);
 
                   return `
                   <div style="color:${tc}">
                     <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:2px;opacity:.75">
-                      <span>Cycle Mean ${mean} | Dev ${dev}</span>
+                      <span>Cycle Mean ${isNaN(mean) ? '-' : mean} | Dev ${isNaN(dev) ? '-' : dev}</span>
                       <span>${lens.length} cycles</span>
                     </div>
                     <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;margin:2px 0">
+                      ${grid}
                       ${meanLine}
-                      <polyline points="${pts}" fill="none" stroke="${variables.line_color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+                      <polyline points="${pts}" fill="none" stroke="${variables.line_color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
                       ${dots}
                       <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="6" fill="${variables.line_color}" opacity=".25"/>
                       <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.5" fill="${variables.line_color}" stroke="#fff" stroke-width="1.5"/>
@@ -374,7 +403,13 @@ views:
                 type: button
                 icon: mdi:calendar-start
                 tap_action:
-                  action: more-info
+                  action: perform-action
+                  perform_action: button.press
+                  confirmation:
+                    text: Houd lang ingedrukt om een nieuwe cycle te starten.
+                  target:
+                    entity_id: null
+                  data: {}
                 hold_action:
                   action: perform-action
                   perform_action: button.press
@@ -408,7 +443,7 @@ views:
                   target: {}
                 tap_action:
                   action: more-info
-                name: ' '
+                name: " "
             columns: 3
           - type: custom:bubble-card
             card_type: button
@@ -424,100 +459,38 @@ views:
             hash: '#future_predictions'
             name: Future Predictions
             icon: mdi:calendar-heart
-            cards:
-              - type: markdown
-                content: >-
-                  ## Future Ovulation Dates
-
-                  {% set start =
-                  states('sensor.cycle_app_predicted_ovulation_date') %}
-
-                  {% set cycle =
-                  states('sensor.cycle_length_mean_robust')|float(28) %}
-
-                  {% set fmt = '%d-%m-%Y' %}
-
-
-                  {% if start not in ['unknown','unavailable'] %}
-
-                  {% set anchor = as_datetime(start) %}
-
-                  • {{ anchor.strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*1))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*2))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*3))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*4))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*5))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*6))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*7))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*8))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*9))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*10))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*11))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*12))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*13))).strftime(fmt) }}
-
-                  {% endif %}
-
-
-                  ---
-
-
-                  ## Future Period Dates
-
-                  {% set start =
-                  states('sensor.cycle_app_predicted_next_period_date') %}
-
-
-                  {% if start not in ['unknown','unavailable'] %}
-
-                  {% set anchor = as_datetime(start) %}
-
-                  • {{ anchor.strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*1))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*2))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*3))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*4))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*5))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*6))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*7))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*8))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*9))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*10))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*11))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*12))).strftime(fmt) }}
-
-                  • {{ (anchor + timedelta(days=(cycle*13))).strftime(fmt) }}
-
-                  {% endif %}
             button_type: name
             card_layout: large
             show_header: true
             scrolling_effect: true
             show_icon: false
             show_name: true
+            cards:
+              - type: horizontal-stack
+                cards:
+                  - type: markdown
+                    content: >-
+                      ## Future Ovulation
+
+                      {% set cycle =
+                      states('sensor.cycle_app_cycle_length_mean_robust')|float(28)
+                      %} {% set fmt = '%d-%m-%Y' %} {% set start =
+                      states('sensor.cycle_app_predicted_ovulation_date') %} {%
+                      if start not in ['unknown','unavailable'] %} {% set anchor
+                      = as_datetime(start) %} {% for i in range(14) %} • {{
+                      (anchor + timedelta(days=(cycle*i))).strftime(fmt) }}
+
+                      {% endfor %} {% endif %}
+                  - type: markdown
+                    content: >-
+                      ## Future Period
+
+                      {% set cycle =
+                      states('sensor.cycle_app_cycle_length_mean_robust')|float(28)
+                      %} {% set fmt = '%d-%m-%Y' %} {% set start =
+                      states('sensor.cycle_app_predicted_next_period_date') %}
+                      {% if start not in ['unknown','unavailable'] %} {% set
+                      anchor = as_datetime(start) %} {% for i in range(14) %} •
+                      {{ (anchor + timedelta(days=(cycle*i))).strftime(fmt) }}
+
+                      {% endfor %} {% endif %}
