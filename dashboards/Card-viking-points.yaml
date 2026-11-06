@@ -1,0 +1,49 @@
+# Requires button-card (HACS). Add via Edit > Add card > Manual.
+# Viking points: +1 point for every intercourse logged during the period (cycle days 1-5). Never resets.
+# Points (with dates) are stored in the integration JSON and exposed by sensor.cycle_app_viking_points.
+type: custom:button-card
+entity: sensor.cycle_app_viking_points
+show_icon: false
+show_state: false
+show_name: false
+variables:
+  label: VIKING POINTS
+  icon: mdi:sail-boat
+  accent: '#e0b030'
+  background: '#1c1226'
+  text_color: '#d9cfe6'
+  years_shown: 3
+styles:
+  card:
+    - background: '[[[ return variables.background; ]]]'
+    - border-radius: 16px
+    - padding: 12px
+    - box-shadow: none
+  grid:
+    - grid-template-areas: '"pts"'
+    - grid-template-columns: 1fr
+custom_fields:
+  pts: |
+    [[[
+      const a = entity.attributes || {};
+      const total = parseInt(entity.state) || 0;
+      const byYear = a.by_year || {}, byMonth = a.by_month || {};
+      const now = new Date();
+      const yr = String(now.getFullYear());
+      const mo = yr + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      const tc = variables.text_color, ac = variables.accent;
+      const years = Object.keys(byYear).sort().reverse().slice(0, variables.years_shown)
+        .map(y => `<span style="margin-right:10px">${y}: <b>${byYear[y]}</b></span>`).join('');
+      const next = '';
+      return `
+      <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+        <ha-icon icon="${variables.icon}" style="--mdc-icon-size:64px;color:${ac}"></ha-icon>
+        <div style="flex:1">
+          <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.label}</div>
+          <div style="font-size:34px;font-weight:700;color:${ac};line-height:1.1">${total}</div>
+          <div style="font-size:12px">This month <b>${byMonth[mo] || 0}</b> &middot; This year <b>${byYear[yr] || 0}</b></div>
+          ${next}
+          <div style="font-size:11px;opacity:.7;margin-top:2px">${years}</div>
+        </div>
+      </div>`;
+    ]]]

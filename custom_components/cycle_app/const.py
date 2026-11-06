@@ -49,3 +49,6 @@ SELECTS = {
         [NOT_SELECTED, "Yes", "No", "Partially"],
     ),
 }
+
+# Cycle days (from day 1) that count as "during the period" for Viking points.
+PERIOD_DAYS = 5

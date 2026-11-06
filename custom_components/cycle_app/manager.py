@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Callable
 
 from homeassistant.core import HomeAssistant, callback
@@ -18,6 +18,7 @@ from .const import (
     LEGACY_PERIOD_FILE,
     MAX_PERIOD_DATES,
     NOT_SELECTED,
+    PERIOD_DAYS,
     SELECTS,
     STORAGE_KEY,
     STORAGE_VERSION,
@@ -88,6 +89,8 @@ class CycleManager:
         self.periods: list[date] = []
         self.luteal: int = DEFAULT_LUTEAL_LENGTH
         self.intercourse: list[dict[str, Any]] = []
+        # Point history: [{"kind": "bamboo"|"viking", "date": "YYYY-MM-DD"}], one entry = 1 point.
+        self.point_log: list[dict[str, str]] = []
         self.selections: dict[str, str] = {key: NOT_SELECTED for key in SELECTS}
         self.stats: engine.CycleStats = engine.compute(
             [], self.luteal, dt_util.now().date()
@@ -103,6 +106,10 @@ class CycleManager:
             )
             self.luteal = int(data.get("luteal", DEFAULT_LUTEAL_LENGTH))
             self.intercourse = list(data.get("intercourse", []))
+            if "points" in data:
+                self.point_log = list(data["points"])
+            else:
+                self._backfill_viking()
         self._recompute()
 
     async def _async_migrate_legacy(self) -> None:
@@ -115,6 +122,7 @@ class CycleManager:
         )
         self.periods = sorted(set(_legacy_periods(period_objs)))[-MAX_PERIOD_DATES:]
         self.intercourse = _legacy_intercourse(inter_objs)
+        self._backfill_viking()
         if self.periods or self.intercourse:
             _LOGGER.info(
                 "Imported %d period dates and %d intercourse records from legacy files",
@@ -129,6 +137,7 @@ class CycleManager:
                 "periods": [d.isoformat() for d in self.periods],
                 "luteal": self.luteal,
                 "intercourse": self.intercourse,
+                "points": self.point_log,
             }
         )
 
@@ -151,9 +160,49 @@ class CycleManager:
             listener()
 
     def _recompute(self) -> None:
-        self.stats = engine.compute(
-            self.periods, self.luteal, dt_util.now().date()
-        )
+        today = dt_util.now().date()
+        self.stats = engine.compute(self.periods, self.luteal, today)
+        if self._award_bamboo(today):
+            self.hass.async_create_task(self._async_save())
+
+    def _intercourse_dates(self) -> list[date]:
+        days = {engine.parse_date(str(r.get("timestamp", ""))[:10]) for r in self.intercourse}
+        return sorted(d for d in days if d)
+
+    def _add_point(self, kind: str, day: date) -> bool:
+        entry = {"kind": kind, "date": day.isoformat()}
+        if kind == "bamboo" and entry in self.point_log:
+            return False
+        self.point_log.append(entry)
+        return True
+
+    def _award_bamboo(self, today: date) -> bool:
+        """1 point per full 5 days without intercourse; points are never removed."""
+        days = self._intercourse_dates()
+        changed = False
+        for i, start in enumerate(days):
+            end = days[i + 1] if i + 1 < len(days) else None
+            k = 1
+            while True:
+                day = start + timedelta(days=5 * k)
+                if (end is not None and day >= end) or (end is None and day > today):
+                    break
+                changed |= self._add_point("bamboo", day)
+                k += 1
+        return changed
+
+    def _backfill_viking(self) -> None:
+        for r in self.intercourse:
+            day = engine.parse_date(str(r.get("timestamp", ""))[:10])
+            try:
+                in_period = int(r.get("cycle_day", 99)) <= PERIOD_DAYS
+            except (TypeError, ValueError):
+                in_period = False
+            if day and in_period:
+                self._add_point("viking", day)
+
+    def points_of(self, kind: str) -> list[str]:
+        return sorted(p["date"] for p in self.point_log if p.get("kind") == kind)
 
     @property
     def points(self) -> list[dict[str, int]]:
@@ -220,6 +269,8 @@ class CycleManager:
                 ),
             }
         )
+        if self.stats.last_period_start and self.stats.cycle_day <= PERIOD_DAYS:
+            self._add_point("viking", dt_util.now().date())
         self.selections = {key: NOT_SELECTED for key in SELECTS}
         await self._async_changed()
 

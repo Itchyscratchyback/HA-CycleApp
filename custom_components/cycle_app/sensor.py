@@ -167,6 +167,31 @@ class DaysSinceIntercourse(CycleEntity, SensorEntity):
         return int((dt_util.utcnow().timestamp() - points[-1]["x"] / 1000) / 86400)
 
 
+class PointsSensor(CycleEntity, SensorEntity):
+    """Running total of points of one kind, with the dated entries as attributes."""
+
+    _unrecorded_attributes = frozenset({"entries"})
+
+    def __init__(self, manager, entry, name: str, unique_id: str, kind: str, icon: str) -> None:
+        super().__init__(manager, entry, name, unique_id)
+        self._kind = kind
+        self._attr_icon = icon
+
+    @property
+    def native_value(self) -> int:
+        return len(self.manager.points_of(self._kind))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        entries = self.manager.points_of(self._kind)
+        by_year: dict[str, int] = {}
+        by_month: dict[str, int] = {}
+        for d in entries:
+            by_year[d[:4]] = by_year.get(d[:4], 0) + 1
+            by_month[d[:7]] = by_month.get(d[:7], 0) + 1
+        return {"entries": entries, "by_year": by_year, "by_month": by_month}
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
     manager: CycleManager = hass.data[DOMAIN][entry.entry_id]
     entities: list[CycleEntity] = [
@@ -180,5 +205,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         IntercourseCountCurrentCycle(manager, entry, "Intercourse Count Current Cycle", "intercourse_count_current_cycle"),
         IntercourseCountFertileWindow(manager, entry, "Intercourse Count Fertile Window", "intercourse_count_fertile_window"),
         DaysSinceIntercourse(manager, entry, "Days Since Intercourse", "days_since_intercourse"),
+        PointsSensor(manager, entry, "Bamboo Score", "bamboo_score", "bamboo", "mdi:bamboo"),
+        PointsSensor(manager, entry, "Viking Points", "viking_points", "viking", "mdi:sail-boat"),
     ]
     async_add_entities(entities)
