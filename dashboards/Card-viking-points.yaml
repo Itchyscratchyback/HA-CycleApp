@@ -2,11 +2,13 @@
 # Viking points: +1 point for every intercourse logged during the period (cycle days 1-5). Never resets.
 # Points (with dates) are stored in the integration JSON and exposed by sensor.cycle_app_viking_points.
 type: custom:button-card
-entity: sensor.cycle_app_viking_points
+triggers_update: all
 show_icon: false
 show_state: false
 show_name: false
 variables:
+  # Leave empty to auto-detect (works with area prefixes such as sensor.bedroom_cycle_app_viking_points).
+  sensor_id: ''
   label: VIKING POINTS
   icon: mdi:sail-boat
   accent: '#e0b030'
@@ -25,8 +27,11 @@ styles:
 custom_fields:
   pts: |
     [[[
-      const a = entity.attributes || {};
-      const total = parseInt(entity.state) || 0;
+      const id = variables.sensor_id || Object.keys(states).find(k => /^sensor\..*viking_points$/.test(k));
+      const ent = states[id];
+      if (!ent) return `<div style="color:${variables.text_color};font-size:12px">Sensor *_viking_points not found - update Cycle App and restart HA</div>`;
+      const a = ent.attributes || {};
+      const total = parseInt(ent.state) || 0;
       const byYear = a.by_year || {}, byMonth = a.by_month || {};
       const now = new Date();
       const yr = String(now.getFullYear());

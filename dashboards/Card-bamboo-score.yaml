@@ -2,11 +2,13 @@
 # Bamboo score: +1 point for every full 5 days without intercourse. Never resets.
 # Points (with dates) are stored in the integration JSON and exposed by sensor.cycle_app_bamboo_score.
 type: custom:button-card
-entity: sensor.cycle_app_bamboo_score
+triggers_update: all
 show_icon: false
 show_state: false
 show_name: false
 variables:
+  # Leave empty to auto-detect (works with area prefixes such as sensor.bedroom_cycle_app_bamboo_score).
+  sensor_id: ''
   label: BAMBOO SCORE
   icon: mdi:bamboo
   accent: '#7bd88f'
@@ -28,8 +30,11 @@ styles:
 custom_fields:
   pts: |
     [[[
-      const a = entity.attributes || {};
-      const total = parseInt(entity.state) || 0;
+      const id = variables.sensor_id || Object.keys(states).find(k => /^sensor\..*bamboo_score$/.test(k));
+      const ent = states[id];
+      if (!ent) return `<div style="color:${variables.text_color};font-size:12px">Sensor *_bamboo_score not found - update Cycle App and restart HA</div>`;
+      const a = ent.attributes || {};
+      const total = parseInt(ent.state) || 0;
       const byYear = a.by_year || {}, byMonth = a.by_month || {};
       const now = new Date();
       const yr = String(now.getFullYear());
@@ -39,7 +44,7 @@ custom_fields:
         .map(y => `<span style="margin-right:10px">${y}: <b>${byYear[y]}</b></span>`).join('');
       let next = '';
       if (variables.show_next_point) {
-        const since = parseInt(states['sensor.cycle_app_days_since_intercourse']?.state);
+        const since = parseInt(states[Object.keys(states).find(k => /^sensor\..*days_since_intercourse$/.test(k)) || '']?.state);
         if (!isNaN(since)) {
           const n = variables.days_per_point - (since % variables.days_per_point);
           next = `<div style="font-size:12px;opacity:.8">Next point in ${n} day${n === 1 ? '' : 's'}</div>`;
