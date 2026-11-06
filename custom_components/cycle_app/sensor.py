@@ -207,5 +207,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         DaysSinceIntercourse(manager, entry, "Days Since Intercourse", "days_since_intercourse"),
         PointsSensor(manager, entry, "Bamboo Score", "bamboo_score", "bamboo", "mdi:bamboo"),
         PointsSensor(manager, entry, "Viking Points", "viking_points", "viking", "mdi:sail-boat"),
+        PointsSensor(manager, entry, "Rabbit Score", "rabbit_score", "rabbit", "mdi:rabbit"),
     ]
     async_add_entities(entities)

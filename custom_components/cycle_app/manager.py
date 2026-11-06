@@ -162,7 +162,7 @@ class CycleManager:
     def _recompute(self) -> None:
         today = dt_util.now().date()
         self.stats = engine.compute(self.periods, self.luteal, today)
-        if self._award_bamboo(today):
+        if self._award_bamboo(today) | self._award_rabbit():
             self.hass.async_create_task(self._async_save())
 
     def _intercourse_dates(self) -> list[date]:
@@ -189,6 +189,32 @@ class CycleManager:
                     break
                 changed |= self._add_point("bamboo", day)
                 k += 1
+        return changed
+
+    def _award_rabbit(self) -> bool:
+        """1 point per group of 3 intercourses within 7 days (groups never overlap)."""
+        days = sorted(
+            d
+            for d in (
+                engine.parse_date(str(r.get("timestamp", ""))[:10])
+                for r in self.intercourse
+            )
+            if d
+        )
+        expected: list[str] = []
+        i = 0
+        while i + 2 < len(days):
+            if (days[i + 2] - days[i]).days <= 6:
+                expected.append(days[i + 2].isoformat())
+                i += 3
+            else:
+                i += 1
+        have = [p["date"] for p in self.point_log if p.get("kind") == "rabbit"]
+        changed = False
+        for d in set(expected):
+            for _ in range(expected.count(d) - have.count(d)):
+                self.point_log.append({"kind": "rabbit", "date": d})
+                changed = True
         return changed
 
     def _backfill_viking(self) -> None:
