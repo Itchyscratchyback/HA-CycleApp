@@ -31,22 +31,12 @@ _PEAK = 0.33
 
 
 def fertility_score(days_to_ov: int | None, stddev: float) -> int:
-    """0-10 score: expected conception chance, spread over the ovulation uncertainty."""
+    """0-10 score: best base score over every ovulation shift within +/- deviation."""
     if days_to_ov is None:
         return 0
-    if stddev <= 0:
-        shifts = {0: 1.0}
-    else:
-        span = int(math.ceil(3 * stddev))
-        raw = {
-            s: math.exp(-0.5 * (s / stddev) ** 2) for s in range(-span, span + 1)
-        }
-        total = sum(raw.values())
-        shifts = {s: w / total for s, w in raw.items()}
-    # A real ovulation s days later than predicted is s days further away.
-    chance = sum(w * _CONCEPTION.get(days_to_ov + s, 0.0) for s, w in shifts.items())
-    return max(0, min(10, _round_half_up(10 * chance / _PEAK)))
-
+    dev = int(math.ceil(max(stddev, 0)))
+    best = max(_CONCEPTION.get(days_to_ov + s, 0.0) for s in range(-dev, dev + 1))
+    return max(0, min(10, _round_half_up(10 * best / _PEAK)))
 
 def _round_half_up(value: float) -> int:
     return int(math.floor(value + 0.5))

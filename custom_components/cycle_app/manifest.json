@@ -1,7 +1,7 @@
 {
   "domain": "cycle_app",
   "name": "Cycle insight+",
-  "version": "2026.11.005",
+  "version": "2026.11.006",
   "documentation": "https://github.com/Itchyscratchyback/HA-CycleApp",
   "issue_tracker": "https://github.com/Itchyscratchyback/HA-CycleApp/issues",
   "codeowners": ["@Itchyscratchyback"],
