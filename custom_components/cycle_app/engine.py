@@ -21,10 +21,31 @@ PHASE_COLORS = {
 }
 DEFAULT_PHASE_COLOR = "#6ecb63"
 
-_SCORES = {
-    0: 10, 1: 9, 2: 9, 3: 9, 4: 8, 5: 8, 6: 7, 7: 7,
-    -1: 10, -2: 9, -3: 8, -4: 6, -5: 4,
+# Chance of conception per day of intercourse, keyed by days until ovulation
+# (0 = ovulation day, positive = before). Based on Wilcox et al., NEJM 1995 /
+# BMJ 2000, with a small margin for the day after. Edit to tune.
+_CONCEPTION = {
+    5: 0.10, 4: 0.16, 3: 0.14, 2: 0.27, 1: 0.31, 0: 0.33, -1: 0.04,
 }
+_PEAK = 0.33
+
+
+def fertility_score(days_to_ov: int | None, stddev: float) -> int:
+    """0-10 score: expected conception chance, spread over the ovulation uncertainty."""
+    if days_to_ov is None:
+        return 0
+    if stddev <= 0:
+        shifts = {0: 1.0}
+    else:
+        span = int(math.ceil(3 * stddev))
+        raw = {
+            s: math.exp(-0.5 * (s / stddev) ** 2) for s in range(-span, span + 1)
+        }
+        total = sum(raw.values())
+        shifts = {s: w / total for s, w in raw.items()}
+    # A real ovulation s days later than predicted is s days further away.
+    chance = sum(w * _CONCEPTION.get(days_to_ov + s, 0.0) for s, w in shifts.items())
+    return max(0, min(10, _round_half_up(10 * chance / _PEAK)))
 
 
 def _round_half_up(value: float) -> int:
@@ -142,7 +163,7 @@ def compute(periods: list[date], luteal: int, today: date) -> CycleStats:
     ovulation = next_period - timedelta(days=luteal) if next_period else None
     days_to_ov = (ovulation - today).days if ovulation else None
 
-    score = _SCORES.get(days_to_ov if days_to_ov is not None else 99, 2)
+    score = fertility_score(days_to_ov, stddev)
     status = "High" if score >= 8 else "Medium" if score >= 5 else "Low"
 
     following = next_period + timedelta(days=preferred) if next_period else None
