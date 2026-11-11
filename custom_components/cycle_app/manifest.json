@@ -1,13 +1,16 @@
 {
   "domain": "cycle_app",
   "name": "Cycle insight+",
-  "version": "2026.11.006",
+  "codeowners": [
+    "@Itchyscratchyback"
+  ],
+  "config_flow": true,
+  "dependencies": [
+  ],
   "documentation": "https://github.com/Itchyscratchyback/HA-CycleApp",
   "issue_tracker": "https://github.com/Itchyscratchyback/HA-CycleApp/issues",
-  "codeowners": ["@Itchyscratchyback"],
-  "config_flow": true,
-  "dependencies": [],
-  "requirements": [],
-  "iot_class": "calculated",
   "integration_type": "service"
+  "iot_class": "calculated",
+  "requirements": [],
+  "version": "2026.11.007",
 }
