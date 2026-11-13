@@ -7,7 +7,6 @@ from datetime import date, timedelta
 from typing import Any, Callable
 
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -266,17 +265,7 @@ class CycleManager:
         kind = sel["intercourse_type"]
         raw = sel["intercourse_raw"]
         needs_creampie = raw in ("Yes", "Partially")
-        valid = (
-            kind != NOT_SELECTED
-            and sel["intercourse_subtype2"] != NOT_SELECTED
-            and raw != NOT_SELECTED
-            and (kind == "Together" or sel["intercourse_subtype1"] != NOT_SELECTED)
-            and (not needs_creampie or sel["intercourse_creampie"] != NOT_SELECTED)
-        )
-        if not valid:
-            raise HomeAssistantError(
-                "Select type, execution, RAW (and the dependent options) before logging"
-            )
+        needs_ending = kind == "F2M" and sel["intercourse_subtype1"] == "Blowjob"
         self.intercourse.append(
             {
                 "timestamp": dt_util.now().strftime("%Y-%m-%dT%H:%M:%S"),
