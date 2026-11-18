@@ -141,10 +141,10 @@ views:
                         // integration: research curve, best value within +/- rounded-up deviation).
                         const fertOpacityMin = 0, fertOpacityMax = 1, fertSteps = 6; // tweak the look here
                         const conc = { 5: 0.10, 4: 0.16, 3: 0.14, 2: 0.27, 1: 0.31, 0: 0.33, '-1': 0.04 };
-                        const dev = Math.ceil(num(get('sensor.cycle_app_cycle_length_stddev_robust'), 0));
+                        const fdev = Math.ceil(num(get('sensor.cycle_app_cycle_length_stddev_robust'), 0));
                         const dayScore = (d) => {
                           let best = 0;
-                          for (let s = -dev; s <= dev; s++) best = Math.max(best, conc[(ovuD - d) + s] || 0);
+                          for (let s = -fdev; s <= fdev; s++) best = Math.max(best, conc[(ovuD - d) + s] || 0);
                           return Math.min(10, Math.round(10 * best / 0.33));
                         };
                         const scores = [];
