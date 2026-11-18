@@ -139,7 +139,7 @@ views:
 
                         // Fertile window: opacity follows the per-day fertility score (same model as the
                         // integration: research curve, best value within +/- rounded-up deviation).
-                        const fertOpacityMin = 0, fertOpacityMax = 1, fertSteps = 6; // tweak the look here
+                        const fertOpacityMin = 0, fertOpacityMax = 1, fertSteps = 16, showShadow = false; // tweak the look here
                         const conc = { 5: 0.10, 4: 0.16, 3: 0.14, 2: 0.27, 1: 0.31, 0: 0.33, '-1': 0.04 };
                         const fdev = Math.ceil(num(get('sensor.cycle_app_cycle_length_stddev_robust'), 0));
                         const dayScore = (d) => {
@@ -154,20 +154,19 @@ views:
                           const k = p - fertStart - 0.5;
                           if (k <= 0) return scores[0];
                           if (k >= scores.length - 1) return scores[scores.length - 1];
-                          const lo = Math.floor(k), t = k - lo;
+                          const lo = Math.floor(k), t0 = k - lo, t = t0 * t0 * (3 - 2 * t0);
                           return scores[lo] * (1 - t) + scores[lo + 1] * t;
                         };
                         let fert = '';
-                        for (let d = fertStart; d <= fertEnd; d++) {
-                          for (let j = 0; j < fertSteps; j++) {
-                            const p0 = d + j / fertSteps, p1 = d + (j + 1) / fertSteps;
-                            const a1 = ang(p0) + (j === 0 ? 0.8 : 0), a2 = ang(p1) - (j === fertSteps - 1 ? 0.8 : 0.0) + (j < fertSteps - 1 ? 0.3 : 0);
-                            const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
-                            const op = fertOpacityMin + (fertOpacityMax - fertOpacityMin) * scoreAt((p0 + p1) / 2) / 10;
-                            fert += `<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="url(#cr-fertile)" stroke-opacity="${op.toFixed(3)}" stroke-width="${w}" stroke-linecap="butt"/>`;
-                          }
-                        }
-                        // Day ticks and labels
+                        const nSlices = (fertEnd - fertStart + 1) * fertSteps;
+                        for (let j = 0; j < nSlices; j++) {
+                          const p0 = fertStart + j / fertSteps, p1 = fertStart + (j + 1) / fertSteps;
+                          const a1 = ang(p0) + (j === 0 ? 0.8 : 0);
+                          const a2 = ang(p1) - (j === nSlices - 1 ? 0.8 : -0.25); // small overlap hides seams
+                          const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
+                          const op = fertOpacityMin + (fertOpacityMax - fertOpacityMin) * scoreAt((p0 + p1) / 2) / 10;
+                          fert += `<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="url(#cr-fertile)" stroke-opacity="${op.toFixed(3)}" stroke-width="${w}" stroke-linecap="butt"/>`;
+                        }                        // Day ticks and labels
                         let ticks = '';
                         for (let d = 1; d <= total; d++) {
                           const a = ang(d);
@@ -254,7 +253,7 @@ views:
                               <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/>
                             </filter>
                           </defs>
-                          <g filter="url(#cr-shadow)">${seg}${fert}</g>
+                          <g${showShadow ? ' filter="url(#cr-shadow)"' : ''}>${seg}${fert}</g>
                           ${ticks}
                           ${progress}
                           ${ovMark}
