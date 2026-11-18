@@ -5,130 +5,580 @@ views:
     icon: mdi:calendar-heart
     cards:
       - type: custom:button-card
-        entity: sensor.cycle_app_cycle_day
-        show_name: false
+        entity: sensor.cycle_app_intercourse_history_count
         show_icon: false
         show_state: false
-        custom_fields:
-          ring: |
-            [[[
-              const day =
-                Number(states['sensor.cycle_app_cycle_day']?.state || 1);
-
-              const length =
-                Number(states['sensor.cycle_app_cycle_length_preferred']?.state || 28);
-
-              const pct =
-                Math.max(0, Math.min(100, (day/length)*100));
-
-              const phase =
-                states['sensor.cycle_app_cycle_phase']?.state || 'Unknown';
-
-              const fertility =
-                states['sensor.cycle_app_fertility_status']?.state || 'Unknown';
-
-              const circumference = 565;
-              const progress = circumference * (pct/100);
-
-              let color = "#ff6fa5";
-
-              switch (phase) {
-
-                case "Period":
-                  color = "#ff6fa5";
-                  break;
-
-                case "Follicular":
-                  color = "#63a4ff";
-                  break;
-
-                case "Fertile":
-                  color = "#ffd54f";
-                  break;
-
-                case "Ovulation":
-                  color = "#ff4444";
-                  break;
-
-                case "Luteal":
-                  color = "#6ecb63";
-                  break;
-              }
-
-              return `
-              <div style="display:flex;justify-content:center;">
-                <svg width="260" height="260" viewBox="0 0 260 260">
-
-                  <circle
-                    cx="130"
-                    cy="130"
-                    r="90"
-                    stroke="#303030"
-                    stroke-width="16"
-                    fill="none"/>
-
-                  <circle
-                    cx="130"
-                    cy="130"
-                    r="90"
-                    stroke="${color}"
-                    stroke-width="16"
-                    fill="none"
-                    stroke-linecap="round"
-                    stroke-dasharray="${progress} ${circumference}"
-                    transform="rotate(-90 130 130)"
-                    style="transition: all 1s ease;"
-                  />
-
-                  <text
-                    x="130"
-                    y="105"
-                    text-anchor="middle"
-                    font-size="48"
-                    fill="white">
-
-                    ${day}
-                  </text>
-
-                  <text
-                    x="130"
-                    y="132"
-                    text-anchor="middle"
-                    font-size="18"
-                    fill="#cccccc">
-
-                    of ${length}
-                  </text>
-
-                  <text
-                    x="130"
-                    y="162"
-                    text-anchor="middle"
-                    font-size="18"
-                    fill="${color}">
-
-                    ${phase}
-                  </text>
-
-                  <text
-                    x="130"
-                    y="186"
-                    text-anchor="middle"
-                    font-size="14"
-                    fill="#aaaaaa">
-
-                    ${fertility} Fertility
-                  </text>
-
-                </svg>
-              </div>
-              `;
-            ]]]
+        show_name: false
+        variables:
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#ffc107'
+          count_partially_half: false
         styles:
           card:
-            - height: 360px
-            - border-radius: 30px
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
             - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const total = parseInt(entity.state);
+              const recs = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">👑 Creampie rate: no logs yet</div>`;
+              }
+              const yes = recs.filter(r => r.intercourse_creampie === 'Yes').length;
+              const part = recs.filter(r => r.intercourse_creampie === 'Partially').length;
+              const value = yes + (variables.count_partially_half ? part / 2 : 0);
+              const pct = Math.min(100, value / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">👑 CREAMPIE RATE</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${yes} of ${total} logs${part ? ` · ${part} partially` : ''}</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.cycle_app_intercourse_history_count
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          stat: Bodyshot
+          label: BODYSHOT RATE
+          emoji: 💦
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#6ecb63'
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const total = parseInt(entity.state);
+              const recs = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+              }
+              const n = recs.filter(r => r.intercourse_subtype1 === variables.stat).length;
+              const pct = Math.min(100, n / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${n} of ${total} logs</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.cycle_app_intercourse_history_count
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          stat: Blowjob
+          label: BLOWJOB RATE
+          emoji: 👄
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#ff6fa5'
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const total = parseInt(entity.state);
+              const recs = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+              }
+              const n = recs.filter(r => r.intercourse_subtype1 === variables.stat).length;
+              const pct = Math.min(100, n / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${n} of ${total} logs</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.cycle_app_intercourse_history_count
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          match_field: intercourse_subtype2
+          match_value: Full
+          label: FULL
+          emoji: 🐢
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#60a5fa'
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const all = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const recs = all.filter(r => r.intercourse_type === 'Together');
+              const total = recs.length;
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+              }
+              const n = recs.filter(r => r[variables.match_field] === variables.match_value).length;
+              const pct = Math.min(100, n / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${n} of ${total} Together logs</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.cycle_app_intercourse_history_count
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          stat: Mouthpie
+          label: MOUTHPIE RATE
+          emoji: 👄
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#fb923c'
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const total = parseInt(entity.state);
+              const recs = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+              }
+              const n = recs.filter(r => (r.intercourse_ending || '').includes(variables.stat)).length;
+              const pct = Math.min(100, n / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${n} of ${total} logs</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.cycle_app_intercourse_history_count
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          match_field: intercourse_subtype2
+          match_value: Quick
+          label: QUICK
+          emoji: ⚡
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#f472b6'
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const all = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const recs = all.filter(r => r.intercourse_type === 'Together');
+              const total = recs.length;
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+              }
+              const n = recs.filter(r => r[variables.match_field] === variables.match_value).length;
+              const pct = Math.min(100, n / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${n} of ${total} Together logs</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.cycle_app_intercourse_history_count
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          match_field: intercourse_raw
+          match_value: Partially
+          label: PARTIALLY RAW
+          emoji: ⚠️
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#fbbf24'
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const all = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const recs = all.filter(r => r.intercourse_type === 'Together');
+              const total = recs.length;
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+              }
+              const n = recs.filter(r => r[variables.match_field] === variables.match_value).length;
+              const pct = Math.min(100, n / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${n} of ${total} Together logs</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.cycle_app_intercourse_history_count
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          match_field: intercourse_raw
+          match_value: 'No'
+          label: SAFE (RAW = NO)
+          emoji: 🛡️
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          accent: '#4ade80'
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pct"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pct: |
+            [[[
+              const all = states['sensor.cycle_app_intercourse_timeline']?.attributes?.records || [];
+              const recs = all.filter(r => r.intercourse_type === 'Together');
+              const total = recs.length;
+              const tc = variables.text_color, ac = variables.accent;
+              if (isNaN(total) || total <= 0) {
+                return `<div style="color:${tc};opacity:.7;font-size:13px">${variables.emoji} ${variables.label}: no logs yet</div>`;
+              }
+              const n = recs.filter(r => r[variables.match_field] === variables.match_value).length;
+              const pct = Math.min(100, n / total * 100);
+              const R = 38, C = 2 * Math.PI * R;
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <svg viewBox="0 0 100 100" width="96" height="96">
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="#2d2438" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ac}" stroke-width="10" stroke-linecap="round"
+                          stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>
+                  <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">${pct.toFixed(0)}%</text>
+                </svg>
+                <div>
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.emoji} ${variables.label}</div>
+                  <div style="font-size:30px;font-weight:700;color:${ac}">${pct.toFixed(1)}%</div>
+                  <div style="font-size:13px">${n} of ${total} Together logs</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.bedroom_cycle_app_bamboo_score
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          label: BAMBOO SCORE
+          icon: mdi:bamboo
+          accent: '#7bd88f'
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          show_next_point: true
+          days_per_point: 5
+          years_shown: 3
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pts"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pts: |
+            [[[
+              const a = entity.attributes || {};
+              const total = parseInt(entity.state) || 0;
+              const byYear = a.by_year || {}, byMonth = a.by_month || {};
+              const now = new Date();
+              const yr = String(now.getFullYear());
+              const mo = yr + '-' + String(now.getMonth() + 1).padStart(2, '0');
+              const tc = variables.text_color, ac = variables.accent;
+              const years = Object.keys(byYear).sort().reverse().slice(0, variables.years_shown)
+                .map(y => `<span style="margin-right:10px">${y}: <b>${byYear[y]}</b></span>`).join('');
+              let next = '';
+              if (variables.show_next_point) {
+                const since = parseInt(states['sensor.cycle_app_days_since_intercourse']?.state);
+                if (!isNaN(since)) {
+                  const n = variables.days_per_point - (since % variables.days_per_point);
+                  next = `<div style="font-size:12px;opacity:.8">Next point in ${n} day${n === 1 ? '' : 's'}</div>`;
+                }
+              }
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <ha-icon icon="${variables.icon}" style="--mdc-icon-size:64px;color:${ac}"></ha-icon>
+                <div style="flex:1">
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.label}</div>
+                  <div style="font-size:34px;font-weight:700;color:${ac};line-height:1.1">${total}</div>
+                  <div style="font-size:12px">This month <b>${byMonth[mo] || 0}</b> &middot; This year <b>${byYear[yr] || 0}</b></div>
+                  ${next}
+                  <div style="font-size:11px;opacity:.7;margin-top:2px">${years}</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        entity: sensor.bedroom_cycle_app_viking_points
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          label: VIKING POINTS
+          icon: mdi:sail-boat
+          accent: '#e0b030'
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          years_shown: 3
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pts"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pts: |
+            [[[
+              const a = entity.attributes || {};
+              const total = parseInt(entity.state) || 0;
+              const byYear = a.by_year || {}, byMonth = a.by_month || {};
+              const now = new Date();
+              const yr = String(now.getFullYear());
+              const mo = yr + '-' + String(now.getMonth() + 1).padStart(2, '0');
+              const tc = variables.text_color, ac = variables.accent;
+              const years = Object.keys(byYear).sort().reverse().slice(0, variables.years_shown)
+                .map(y => `<span style="margin-right:10px">${y}: <b>${byYear[y]}</b></span>`).join('');
+              const next = '';
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <ha-icon icon="${variables.icon}" style="--mdc-icon-size:64px;color:${ac}"></ha-icon>
+                <div style="flex:1">
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.label}</div>
+                  <div style="font-size:34px;font-weight:700;color:${ac};line-height:1.1">${total}</div>
+                  <div style="font-size:12px">This month <b>${byMonth[mo] || 0}</b> &middot; This year <b>${byYear[yr] || 0}</b></div>
+                  ${next}
+                  <div style="font-size:11px;opacity:.7;margin-top:2px">${years}</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: custom:button-card
+        triggers_update: all
+        show_icon: false
+        show_state: false
+        show_name: false
+        variables:
+          sensor_id: ''
+          label: RABBIT SCORE
+          icon: mdi:rabbit
+          accent: '#7dd3fc'
+          background: '#1c1226'
+          text_color: '#d9cfe6'
+          years_shown: 3
+        styles:
+          card:
+            - background: '[[[ return variables.background; ]]]'
+            - border-radius: 16px
+            - padding: 12px
+            - box-shadow: none
+          grid:
+            - grid-template-areas: '"pts"'
+            - grid-template-columns: 1fr
+        custom_fields:
+          pts: |
+            [[[
+              const id = variables.sensor_id || Object.keys(states).find(k => /^sensor\..*rabbit_score$/.test(k));
+              const ent = states[id];
+              if (!ent) return `<div style="color:${variables.text_color};font-size:12px">Sensor *_rabbit_score not found - update Cycle App and restart HA</div>`;
+              const a = ent.attributes || {};
+              const total = parseInt(ent.state) || 0;
+              const byYear = a.by_year || {}, byMonth = a.by_month || {};
+              const now = new Date();
+              const yr = String(now.getFullYear());
+              const mo = yr + '-' + String(now.getMonth() + 1).padStart(2, '0');
+              const tc = variables.text_color, ac = variables.accent;
+              const years = Object.keys(byYear).sort().reverse().slice(0, variables.years_shown)
+                .map(y => `<span style="margin-right:10px">${y}: <b>${byYear[y]}</b></span>`).join('');
+              const next = '';
+              return `
+              <div style="display:flex;align-items:center;gap:16px;color:${tc}">
+                <ha-icon icon="${variables.icon}" style="--mdc-icon-size:64px;color:${ac}"></ha-icon>
+                <div style="flex:1">
+                  <div style="font-size:11px;letter-spacing:3px;opacity:.75">${variables.label}</div>
+                  <div style="font-size:34px;font-weight:700;color:${ac};line-height:1.1">${total}</div>
+                  <div style="font-size:12px">This month <b>${byMonth[mo] || 0}</b> &middot; This year <b>${byYear[yr] || 0}</b></div>
+                  ${next}
+                  <div style="font-size:11px;opacity:.7;margin-top:2px">${years}</div>
+                </div>
+              </div>`;
+            ]]]
+      - type: gauge
+        entity: sensor.cycle_app_cycle_length_stddev_robust
+        name: Cycle Stability
+        min: 0
+        max: 10
+        severity:
+          green: 0
+          yellow: 2
+          red: 4
+      - type: horizontal-stack
+        cards:
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: button.cycle_app_period_started
+            name: Period Started
+            icon: mdi:calendar-plus
+          - type: custom:bubble-card
+            card_type: button
+            button_type: name
+            name: Log Activity
+            icon: mdi:heart
+            tap_action:
+              action: navigate
+              navigation_path: '#log_activity'
+            scrolling_effect: false
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: button.cycle_app_clear_intercourse_history
+            name: Clear Activity
+            icon: mdi:delete
       - type: entities
         title: Current Status
         entities:
@@ -165,20 +615,6 @@ views:
             name: Days To Following Ovulation
           - entity: sensor.cycle_app_days_to_pre_period
             name: Days To Pre-Period
-      - type: markdown
-        content: |
-
-          ## Cycle Phase Legend
-
-          🩷 **Period**
-
-          🟦 **Follicular**
-
-          🟨 **Fertile Window**
-
-          🟥 **Ovulation**
-
-          🟩 **Luteal**
       - type: entities
         title: Prediction Window
         entities:
@@ -211,25 +647,18 @@ views:
             name: Sample Size
           - entity: sensor.cycle_app_cycle_outlier_count
             name: Outliers
-      - type: gauge
-        entity: sensor.cycle_app_cycle_length_stddev_robust
-        name: Cycle Stability
-        min: 0
-        max: 10
-        severity:
-          green: 0
-          yellow: 2
-          red: 4
+          - entity: sensor.cycle_app_intercourse_history_count
+          - entity: sensor.cycle_app_intercourse_count_current_cycle
       - type: entities
         title: Intercourse Analytics
         entities:
-          - entity: sensor.last_intercourse_date_2
+          - entity: sensor.cycle_app_last_intercourse_date
             name: Last Activity
-          - entity: sensor.days_since_intercourse_3
+          - entity: sensor.cycle_app_days_since_intercourse
             name: Days Since Activity
-          - entity: sensor.intercourse_count_current_cycle_2
+          - entity: sensor.cycle_app_intercourse_count_current_cycle
             name: Current Cycle Activity
-          - entity: sensor.intercourse_count_fertile_window_3
+          - entity: sensor.cycle_app_intercourse_count_fertile_window
             name: Fertile Window Activity
       - type: markdown
         content: >
@@ -260,90 +689,6 @@ views:
 
           **Mean Length:** {{
           states('sensor.cycle_app_cycle_length_mean_robust') }} days
-      - type: horizontal-stack
-        cards:
-          - show_name: true
-            show_icon: true
-            type: button
-            entity: button.cycle_app_period_started
-            name: Period Started
-            icon: mdi:calendar-plus
-            tap_action:
-              action: none
-            hold_action:
-              action: perform-action
-              perform_action: button.press
-              confirmation:
-                text: Nieuwe cycle starten?
-              target:
-                entity_id: button.cycle_app_period_started
-          - type: custom:bubble-card
-            card_type: button
-            button_type: name
-            name: Log Activity
-            icon: mdi:heart
-            tap_action:
-              action: navigate
-              navigation_path: '#log_activity'
-            scrolling_effect: false
-          - show_name: true
-            show_icon: true
-            type: button
-            entity: button.cycle_app_clear_intercourse_history
-            name: Clear Activity
-            icon: mdi:delete
-      - type: custom:bubble-card
-        card_type: pop-up
-        hash: '#log_activity'
-        name: Log Activity
-        icon: mdi:heart
-        cards:
-          - type: entities
-            title: Log Activity
-            show_header_toggle: false
-            entities:
-              - entity: select.cycle_app_intercourse_type
-                name: Who did what
-              - type: conditional
-                conditions:
-                  - entity: select.cycle_app_intercourse_type
-                    state_not: Together
-                  - entity: select.cycle_app_intercourse_type
-                    state_not: Not selected
-                row:
-                  entity: select.cycle_app_intercourse_how
-                  name: How
-              - type: conditional
-                conditions:
-                  - entity: select.cycle_app_intercourse_type
-                    state: F2M
-                  - entity: select.cycle_app_intercourse_how
-                    state: Blowjob
-                row:
-                  entity: select.cycle_app_intercourse_ending
-                  name: How did things end?
-              - entity: select.cycle_app_intercourse_execution
-                name: Execution
-              - entity: select.cycle_app_intercourse_raw
-                name: Did you go RAW
-              - type: conditional
-                conditions:
-                  - entity: select.cycle_app_intercourse_raw
-                    state: 'Yes'
-                row:
-                  entity: select.cycle_app_intercourse_creampie
-                  name: Did you make a nice Creampie?
-              - type: conditional
-                conditions:
-                  - entity: select.cycle_app_intercourse_raw
-                    state: Partially
-                row:
-                  entity: select.cycle_app_intercourse_creampie
-                  name: Did you make a nice Creampie?
-          - type: button
-            entity: button.cycle_app_log_intercourse
-            name: Save Activity
-            icon: mdi:content-save-heart
       - type: entities
         title: Diagnostics
         show_header_toggle: false
@@ -399,7 +744,7 @@ views:
         entities:
           - entity: text.cycle_app_period_start_history
           - entity: text.cycle_app_intercourse_history
-          - entity: sensor.intercourse_history_count
+          - entity: sensor.cycle_app_intercourse_history_count
           - entity: sensor.cycle_app_cycle_lengths_calculated
       - type: custom:bubble-card
         card_type: button
@@ -499,168 +844,58 @@ views:
               {% endif %}
         button_type: name
         card_layout: large-2-rows
-      - type: custom:apexcharts-card
-        graph_span: 31d
-        span:
-          end: day
-        header:
-          show: true
-          title: Activity per day (31 days)
-        yaxis:
-          - min: 0
-            decimals: 0
-            apex_config:
-              forceNiceScale: true
-              tickAmount: 4
-        apex_config:
-          chart:
-            type: bar
-            stacked: true
-            height: 350
-          plotOptions:
-            bar:
-              columnWidth: 70%
-          grid:
-            show: true
-          xaxis:
-            type: datetime
-            labels:
-              datetimeUTC: false
-              format: dd MMM
-          legend:
-            show: true
-          dataLabels:
-            formatter: |
-              EVAL:function(val) { return val > 0 ? '👑' : ''; }
-          tooltip:
-            custom: |
-              EVAL:function(o) {
-                const s = o.w.config.series[o.seriesIndex];
-                const pt = s.data[o.dataPointIndex];
-                const d = new Date(pt[0]);
-                const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                const g = s.name.startsWith('👑') ? 'Crown' : s.name;
-                const recs = (((window.__cycleDays || {})[k]) || {})[g] || [];
-                if (!recs.length) return '<div style="display:none"></div>';
-                const labels = {
-                  intercourse_type: 'Type', intercourse_subtype1: 'How',
-                  intercourse_subtype2: 'Execution', intercourse_raw: 'RAW',
-                  intercourse_ending: 'Ending', intercourse_creampie: 'Creampie', cycle_day: 'Cycle day'
-                };
-                let html = '<div style="padding:8px;font-size:12px"><b>' + k + ' - ' + s.name + ' (' + recs.length + ')</b>';
-                recs.forEach(r => {
-                  html += '<hr style="margin:4px 0">';
-                  html += '<b>' + (r.timestamp || '').slice(11, 16) + '</b>';
-                  Object.keys(labels).forEach(f => {
-                    if (r[f] !== undefined && r[f] !== '' && r[f] !== 'Not selected') {
-                      html += '<br>' + labels[f] + ': ' + r[f] + (f === 'intercourse_creampie' && r[f] === 'Yes' ? ' 👑' : '');
-                    }
-                  });
-                });
-                return html + '</div>';
-              }
-        series:
-          - entity: sensor.intercourse_timeline
-            name: Together
-            color: '#ff6fa5'
-            type: column
-            show:
-              datalabels: false
-            data_generator: >
-              const all = {}; const key = d => d.getFullYear() + '-' +
-              String(d.getMonth()+1).padStart(2,'0') + '-' +
-              String(d.getDate()).padStart(2,'0');
-
-              (entity.attributes.records || []).forEach(r => {
-                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
-                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
-                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
-              });
-
-              window.__cycleDays = all;
-
-              const t = new Date(); t.setHours(0,0,0,0); const out = [];
-
-              for (let i = 30; i >= 0; i--) { const d = new Date(t);
-              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
-              || {})['Together'] || []).length]); }
-
-              return out;
-          - entity: sensor.intercourse_timeline
-            name: F2M
-            color: '#63a4ff'
-            type: column
-            show:
-              datalabels: false
-            data_generator: >
-              const all = {}; const key = d => d.getFullYear() + '-' +
-              String(d.getMonth()+1).padStart(2,'0') + '-' +
-              String(d.getDate()).padStart(2,'0');
-
-              (entity.attributes.records || []).forEach(r => {
-                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
-                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
-                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
-              });
-
-              window.__cycleDays = all;
-
-              const t = new Date(); t.setHours(0,0,0,0); const out = [];
-
-              for (let i = 30; i >= 0; i--) { const d = new Date(t);
-              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
-              || {})['F2M'] || []).length]); }
-
-              return out;
-          - entity: sensor.intercourse_timeline
-            name: M2F
-            color: '#ffd54f'
-            type: column
-            show:
-              datalabels: false
-            data_generator: >
-              const all = {}; const key = d => d.getFullYear() + '-' +
-              String(d.getMonth()+1).padStart(2,'0') + '-' +
-              String(d.getDate()).padStart(2,'0');
-
-              (entity.attributes.records || []).forEach(r => {
-                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
-                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
-                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
-              });
-
-              window.__cycleDays = all;
-
-              const t = new Date(); t.setHours(0,0,0,0); const out = [];
-
-              for (let i = 30; i >= 0; i--) { const d = new Date(t);
-              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
-              || {})['M2F'] || []).length]); }
-
-              return out;
-          - entity: sensor.intercourse_timeline
-            name: 👑 Creampie
-            color: '#ffc107'
-            type: column
-            show:
-              datalabels: true
-            data_generator: >
-              const all = {}; const key = d => d.getFullYear() + '-' +
-              String(d.getMonth()+1).padStart(2,'0') + '-' +
-              String(d.getDate()).padStart(2,'0');
-
-              (entity.attributes.records || []).forEach(r => {
-                const k = (r.timestamp || '').slice(0, 10); if (!k || !r.intercourse_type) return;
-                const g = r.intercourse_creampie === 'Yes' ? 'Crown' : r.intercourse_type;
-                all[k] = all[k] || {}; (all[k][g] = all[k][g] || []).push(r);
-              });
-
-              window.__cycleDays = all;
-
-              const t = new Date(); t.setHours(0,0,0,0); const out = [];
-
-              for (let i = 30; i >= 0; i--) { const d = new Date(t);
-              d.setDate(t.getDate() - i); out.push([d.getTime(), ((all[key(d)]
-              || {})['Crown'] || []).length]); }
-
-              return out;
+      - type: custom:bubble-card
+        card_type: pop-up
+        hash: '#log_activity'
+        name: Log Activity
+        icon: mdi:heart
+        cards:
+          - type: entities
+            title: Log Activity
+            show_header_toggle: false
+            entities:
+              - entity: select.cycle_app_intercourse_type
+                name: Who did what
+              - type: conditional
+                conditions:
+                  - entity: select.cycle_app_intercourse_type
+                    state_not: Together
+                  - entity: select.cycle_app_intercourse_type
+                    state_not: Not selected
+                row:
+                  entity: select.cycle_app_intercourse_how
+                  name: How
+              - type: conditional
+                conditions:
+                  - entity: select.cycle_app_intercourse_type
+                    state: F2M
+                  - entity: select.cycle_app_intercourse_how
+                    state: Blowjob
+                row:
+                  entity: select.cycle_app_intercourse_ending
+                  name: How did things end?
+              - entity: select.cycle_app_intercourse_execution
+                name: Execution
+              - entity: select.cycle_app_intercourse_raw
+                name: Did you go RAW
+              - type: conditional
+                conditions:
+                  - entity: select.cycle_app_intercourse_raw
+                    state: 'Yes'
+                row:
+                  entity: select.cycle_app_intercourse_creampie
+                  name: Did you make a nice Creampie?
+              - type: conditional
+                conditions:
+                  - entity: select.cycle_app_intercourse_raw
+                    state: Partially
+                row:
+                  entity: select.cycle_app_intercourse_creampie
+                  name: Did you make a nice Creampie?
+          - show_name: true
+            show_icon: true
+            type: button
+            entity: button.cycle_app_log_intercourse
+            name: Save Activity
+            icon: mdi:content-save
+        button_type: name
