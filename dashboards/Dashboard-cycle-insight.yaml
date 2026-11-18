@@ -127,11 +127,12 @@ views:
                           return `M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${rr} ${rr} 0 ${(a2 - a1) > 180 ? 1 : 0} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
                         };
 
+                        const extStartF = Math.max(menseEnd + 1, fertStart - Math.ceil(num(get('sensor.cycle_app_cycle_length_stddev_robust'), 0)));
                         // Segments, later ones draw on top of earlier ones
                         const seg = [
                           { a: 1, b: total, c: '#2d2438' },
                           { a: 1, b: menseEnd, c: 'url(#cr-period)' },
-                          { a: menseEnd + 1, b: Math.max(menseEnd + 1, fertStart - 1), c: 'url(#cr-follicular)' },
+                          { a: menseEnd + 1, b: Math.max(menseEnd + 1, extStartF - 1), c: 'url(#cr-follicular)' },
                           { a: fertEnd + 1, b: Math.max(fertEnd + 1, preStart - 1), c: 'url(#cr-luteal)' },
                           { a: preStart, b: total, c: 'url(#cr-pre)' }
                         ].filter(s => s.a <= s.b && s.a <= total)
@@ -139,34 +140,42 @@ views:
 
                         // Fertile window: opacity follows the per-day fertility score (same model as the
                         // integration: research curve, best value within +/- rounded-up deviation).
-                        const fertOpacityMin = 0, fertOpacityMax = 1, fertSteps = 16, showShadow = false; // tweak the look here
+                        // The deviation day(s) before it blend from the period colour to the fertile colour.
+                        const fertOpacityMin = 0, fertOpacityMax = 1, fertSteps = 16; // tweak the look here
+                        const fertRGB = [196, 75, 208], periodRGB = [255, 90, 122];
                         const conc = { 5: 0.10, 4: 0.16, 3: 0.14, 2: 0.27, 1: 0.31, 0: 0.33, '-1': 0.04 };
                         const fdev = Math.ceil(num(get('sensor.cycle_app_cycle_length_stddev_robust'), 0));
+                        const extStart = Math.max(menseEnd + 1, fertStart - fdev);
                         const dayScore = (d) => {
                           let best = 0;
                           for (let s = -fdev; s <= fdev; s++) best = Math.max(best, conc[(ovuD - d) + s] || 0);
                           return Math.min(10, Math.round(10 * best / 0.33));
                         };
                         const scores = [];
-                        for (let d = fertStart; d <= fertEnd; d++) scores.push(dayScore(d));
-                        // Score at a fractional day position, linearly interpolated between day centres
+                        for (let d = extStart; d <= fertEnd; d++) scores.push(dayScore(d));
+                        // Score at a fractional day position, smoothly eased between day centres
                         const scoreAt = (p) => {
-                          const k = p - fertStart - 0.5;
+                          const k = p - extStart - 0.5;
                           if (k <= 0) return scores[0];
                           if (k >= scores.length - 1) return scores[scores.length - 1];
                           const lo = Math.floor(k), t0 = k - lo, t = t0 * t0 * (3 - 2 * t0);
                           return scores[lo] * (1 - t) + scores[lo + 1] * t;
                         };
+                        const fertColor = (p) => {
+                          const t = p >= fertStart ? 1 : Math.max(0, (p - extStart) / (fertStart - extStart));
+                          return 'rgb(' + fertRGB.map((v, i) => Math.round(periodRGB[i] + (v - periodRGB[i]) * t)).join(',') + ')';
+                        };
                         let fert = '';
-                        const nSlices = (fertEnd - fertStart + 1) * fertSteps;
+                        const nSlices = (fertEnd - extStart + 1) * fertSteps;
                         for (let j = 0; j < nSlices; j++) {
-                          const p0 = fertStart + j / fertSteps, p1 = fertStart + (j + 1) / fertSteps;
+                          const p0 = extStart + j / fertSteps, p1 = extStart + (j + 1) / fertSteps;
                           const a1 = ang(p0) + (j === 0 ? 0.8 : 0);
                           const a2 = ang(p1) - (j === nSlices - 1 ? 0.8 : -0.25); // small overlap hides seams
                           const [x1, y1] = pt(a1, r), [x2, y2] = pt(a2, r);
                           const op = fertOpacityMin + (fertOpacityMax - fertOpacityMin) * scoreAt((p0 + p1) / 2) / 10;
-                          fert += `<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="url(#cr-fertile)" stroke-opacity="${op.toFixed(3)}" stroke-width="${w}" stroke-linecap="butt"/>`;
-                        }                        // Day ticks and labels
+                          fert += `<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="${fertColor((p0 + p1) / 2)}" stroke-opacity="${op.toFixed(3)}" stroke-width="${w}" stroke-linecap="butt"/>`;
+                        }
+                        // Day ticks and labels
                         let ticks = '';
                         for (let d = 1; d <= total; d++) {
                           const a = ang(d);
@@ -249,11 +258,8 @@ views:
                             <linearGradient id="cr-fertile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e879f9"/><stop offset="1" stop-color="#9333ea"/></linearGradient>
                             <linearGradient id="cr-luteal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86efac"/><stop offset="1" stop-color="#4caf50"/></linearGradient>
                             <linearGradient id="cr-pre" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#d4a017"/></linearGradient>
-                            <filter id="cr-shadow" x="-30%" y="-30%" width="160%" height="160%">
-                              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/>
-                            </filter>
                           </defs>
-                          <g${showShadow ? ' filter="url(#cr-shadow)"' : ''}>${seg}${fert}</g>
+                          <g>${seg}${fert}</g>
                           ${ticks}
                           ${progress}
                           ${ovMark}
