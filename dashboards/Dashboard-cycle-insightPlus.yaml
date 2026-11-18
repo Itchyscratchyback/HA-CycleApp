@@ -577,7 +577,7 @@ views:
             show_icon: true
             type: button
             entity: button.cycle_app_clear_intercourse_history
-            name: Clear Activity
+            name: Clear Last Activity
             icon: mdi:delete
       - type: entities
         title: Current Status
@@ -854,6 +854,8 @@ views:
             title: Log Activity
             show_header_toggle: false
             entities:
+              - entity: datetime.cycle_app_intercourse_date_time
+                name: When (empty = now)
               - entity: select.cycle_app_intercourse_type
                 name: Who did what
               - type: conditional

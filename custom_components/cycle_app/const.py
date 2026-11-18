@@ -2,7 +2,7 @@
 
 DOMAIN = "cycle_app"
 
-PLATFORMS = ["sensor", "button", "select", "number", "text"]
+PLATFORMS = ["sensor", "button", "select", "number", "text", "datetime"]
 
 STORAGE_KEY = "cycle_app.data"
 STORAGE_VERSION = 1

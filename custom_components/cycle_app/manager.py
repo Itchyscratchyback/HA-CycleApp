@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
 from homeassistant.core import HomeAssistant, callback
@@ -91,6 +91,8 @@ class CycleManager:
         # Point history: [{"kind": "bamboo"|"viking", "date": "YYYY-MM-DD"}], one entry = 1 point.
         self.point_log: list[dict[str, str]] = []
         self.selections: dict[str, str] = {key: NOT_SELECTED for key in SELECTS}
+        # Optional moment of the next logged intercourse (None = now)
+        self.log_time: datetime | None = None
         self.stats: engine.CycleStats = engine.compute(
             [], self.luteal, dt_util.now().date()
         )
@@ -262,14 +264,18 @@ class CycleManager:
 
     async def async_log_intercourse(self) -> None:
         sel = self.selections
+        when = dt_util.as_local(self.log_time) if self.log_time else dt_util.now()
+        when_day = when.date()
+        past = [d for d in self.periods if d <= when_day]
+        cycle_day = engine.compute(past, self.luteal, when_day).cycle_day if past else 0
         kind = sel["intercourse_type"]
         raw = sel["intercourse_raw"]
         needs_creampie = raw in ("Yes", "Partially")
         needs_ending = kind == "F2M" and sel["intercourse_subtype1"] == "Blowjob"
         self.intercourse.append(
             {
-                "timestamp": dt_util.now().strftime("%Y-%m-%dT%H:%M:%S"),
-                "cycle_day": self.stats.cycle_day,
+                "timestamp": when.strftime("%Y-%m-%dT%H:%M:%S"),
+                "cycle_day": cycle_day,
                 "intercourse_type": kind,
                 "intercourse_subtype1": (
                     "" if kind == "Together" else sel["intercourse_subtype1"]
@@ -284,9 +290,34 @@ class CycleManager:
                 ),
             }
         )
-        if self.stats.last_period_start and self.stats.cycle_day <= PERIOD_DAYS:
-            self._add_point("viking", dt_util.now().date())
+        self.intercourse.sort(key=lambda r: str(r.get("timestamp", "")))
+        if past and 0 < cycle_day <= PERIOD_DAYS:
+            self._add_point("viking", when_day)
         self.selections = {key: NOT_SELECTED for key in SELECTS}
+        self.log_time = None
+        await self._async_changed()
+
+    @callback
+    def async_set_log_time(self, value: datetime | None) -> None:
+        self.log_time = value
+        self.async_refresh()
+
+    async def async_remove_last_intercourse(self) -> None:
+        """Remove only the most recent logged entry (and its Viking point)."""
+        if not self.intercourse:
+            return
+        last = self.intercourse.pop()
+        day = str(last.get("timestamp", ""))[:10]
+        try:
+            was_period = int(last.get("cycle_day", 99)) <= PERIOD_DAYS
+        except (TypeError, ValueError):
+            was_period = False
+        if was_period:
+            for i in range(len(self.point_log) - 1, -1, -1):
+                p = self.point_log[i]
+                if p.get("kind") == "viking" and p.get("date") == day:
+                    del self.point_log[i]
+                    break
         await self._async_changed()
 
     async def async_clear_intercourse(self) -> None:

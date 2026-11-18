@@ -28,7 +28,7 @@ class ClearIntercourseButton(CycleEntity, ButtonEntity):
     _attr_icon = "mdi:delete"
 
     async def async_press(self) -> None:
-        await self.manager.async_clear_intercourse()
+        await self.manager.async_remove_last_intercourse()
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
@@ -37,6 +37,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         [
             PeriodStartedButton(manager, entry, "Period Started", "period_started"),
             LogIntercourseButton(manager, entry, "Log Intercourse", "log_intercourse"),
-            ClearIntercourseButton(manager, entry, "Clear Intercourse History", "clear_intercourse_history"),
+            ClearIntercourseButton(manager, entry, "Clear Last Intercourse", "clear_intercourse_history"),
         ]
     )
